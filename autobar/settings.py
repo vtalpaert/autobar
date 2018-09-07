@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'recipes',
 ]
 
 MIDDLEWARE = [
@@ -118,3 +119,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# Settings for the bar configuration
+PUMPS_NB = 10
+INTERFACE_USE_DUMMY = True
+
+UNIT_DENSITY = 'g/L'
+UNIT_DENSITY_DEFAULT = 1000  # default density for liquids in [UNIT_DENSITY]
+UNIT_VOLUME = 'mL'
+UNIT_MASS = 'g'
+UNIT_CONVERSION_VOLUME_SI = 1e-3  # from UNIT_VOLUME to SI
