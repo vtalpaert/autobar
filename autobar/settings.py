@@ -120,13 +120,18 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+UPLOAD_FOR_MIX = 'mixes'
 
 # Settings for the bar configuration
 PUMPS_NB = 10
 INTERFACE_USE_DUMMY = True
 
 UNIT_DENSITY = 'g/L'
-UNIT_DENSITY_DEFAULT = 1000  # default density for liquids in [UNIT_DENSITY]
-UNIT_VOLUME = 'mL'
+UNIT_DENSITY_DEFAULT = 100  # default density for liquids in [UNIT_DENSITY]
+UNIT_VOLUME = 'cL'
+UNIT_VOLUME_VERBOSE = 'centiliter'
 UNIT_MASS = 'g'
-UNIT_CONVERSION_VOLUME_SI = 1e-3  # from UNIT_VOLUME to SI
+UNIT_CONVERSION_VOLUME_SI = 1e-2  # from UNIT_VOLUME to SI
