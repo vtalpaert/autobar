@@ -1,7 +1,6 @@
 import os
 
 from django.db import models
-from django.db.models import Q
 from django.utils.text import get_valid_filename
 
 from autobar import settings
@@ -44,7 +43,7 @@ class Ingredient(models.Model):
 def mix_upload_to(instance, filename):
     new_filename = get_valid_filename(instance.name)
     if len(filename.split('.')) > 1:  # keep extension
-        new_filename += filename.split('.')[-1]
+        new_filename += '.' + filename.split('.')[-1]
     return os.path.join(settings.UPLOAD_FOR_MIX, new_filename)
 
 
@@ -64,14 +63,28 @@ class Mix(models.Model):
     count = models.PositiveSmallIntegerField(default=0)
     image = models.ImageField(
         max_length=200,
-        height_field='height',
-        width_field='width',
+        height_field='image_height',
+        width_field='image_width',
         upload_to=mix_upload_to,
         null=True,
+        blank=True,
+    )
+    image_height = models.PositiveIntegerField(null=True)
+    image_width = models.PositiveIntegerField(null=True)
+    description = models.TextField(
+        blank=True,
+    )
+    verified = models.BooleanField(
+        default=False
     )
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        for dose in self.doses:
+            dose.set_quantity_to_zero_if_not_required()
+        super(Mix, self).save(*args, **kwargs)
 
     @property
     def doses(self):
@@ -81,15 +94,18 @@ class Mix(models.Model):
         return self.doses.order_by('number')
 
     def serve(self):
-        for dose in self.doses:
+        for dose in self.ordered_doses():
             dose.serve()
 
     @property
     def alcohol_percentage(self):
         q_and_p = self.doses.values_list('quantity', 'ingredient__alcohol_percentage')
-        if not q_and_p.exists():
+        if len(q_and_p) == 0:
             return 0
-        return sum(map(lambda qp: qp[0] * qp[1], q_and_p))/sum(map(lambda qp: qp[0], q_and_p))
+        try:
+            return sum(map(lambda qp: qp[0] * qp[1], q_and_p))/sum(map(lambda qp: qp[0], q_and_p))
+        except ZeroDivisionError:
+            return 0
 
     @property
     def volume(self):
@@ -101,7 +117,17 @@ class Mix(models.Model):
         return sum(map(lambda qd: qd[0] * settings.UNIT_CONVERSION_VOLUME_SI * qd[1], q_and_d))
 
     def is_available(self):
-        return all(dose.is_available() for dose in self.doses)
+        doses = self.doses
+        if not doses:
+            return False
+        return all(dose.is_available() for dose in doses)
+
+    def calibrate_volume_to(self, desired_total):
+        """Look out you respect the correct units"""
+        volume = self.volume
+        for dose in self.doses:
+            dose.quantity = dose.quantity * desired_total / volume
+            dose.save()
 
 
 class Dose(models.Model):
@@ -113,10 +139,12 @@ class Dose(models.Model):
     number = models.PositiveSmallIntegerField(
         help_text='The number in which order the dose must be served'
     )
-    required = models.BooleanField(default=True)
 
     def __str__(self):
-        return '{} {} of {}'.format(self.quantity, settings.UNIT_VOLUME, self.ingredient)
+        if self.ingredient.added_separately:
+            return str(self.ingredient)
+        else:
+            return '{} {} of {}'.format(self.quantity, settings.UNIT_VOLUME, self.ingredient)
 
     def save(self, *args, **kwargs):
         self.quantity = _cut(self.quantity, low=0)
@@ -124,6 +152,15 @@ class Dose(models.Model):
 
     def is_available(self):
         return self.ingredient.is_available() if self.required else True
+
+    def set_quantity_to_zero_if_not_required(self):
+        if self.ingredient.added_separately:
+            self.quantity = 0
+            self.save()
+
+    @property
+    def required(self):
+        return not self.ingredient.added_separately
 
 
 class Dispenser(models.Model):

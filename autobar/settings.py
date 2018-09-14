@@ -130,7 +130,7 @@ PUMPS_NB = 10
 INTERFACE_USE_DUMMY = True
 
 UNIT_DENSITY = 'g/L'
-UNIT_DENSITY_DEFAULT = 100  # default density for liquids in [UNIT_DENSITY]
+UNIT_DENSITY_DEFAULT = 1000  # default density for liquids in [UNIT_DENSITY]
 UNIT_VOLUME = 'cL'
 UNIT_VOLUME_VERBOSE = 'centiliter'
 UNIT_MASS = 'g'
