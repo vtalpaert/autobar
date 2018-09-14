@@ -48,6 +48,8 @@ REPLACING = (
     ('1/3', '0.33'),
     ('3-4', '3.5'),
     ('1-3', '2'),
+    ('2-3', '2.5'),
+    ('1-2', '1.5'),
     ('Fill with', '10 oz')
 )
 
@@ -132,7 +134,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         pool_manager = PoolManagerCounter(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-        for letter in 'a':
+        for letter in 'z':
             url = get_browse_url_by_letter(letter)
             html_letter = open_page(url, pool_manager)
             ids = re.findall(r'drink.php\?c=\d+', str(html_letter))

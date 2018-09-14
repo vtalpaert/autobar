@@ -24,6 +24,11 @@ def combine_as_one(modeladmin, request, queryset):
         ingredient.delete()
 
 
+def delete_with_extreme_prejudice(modeladmin, request, queryset):
+    mixes = Mix.objects.filter(ingredients__in=queryset.all()).delete()
+    queryset.delete()
+
+
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     list_display = (
@@ -36,7 +41,12 @@ class IngredientAdmin(admin.ModelAdmin):
         'added_separately',
     )
     search_fields = ('name',)
-    actions = (mark_as_separate, reset_density_to_default, combine_as_one)
+    actions = (
+        mark_as_separate,
+        reset_density_to_default,
+        combine_as_one,
+        delete_with_extreme_prejudice
+    )
 
 
 @admin.register(Dose)
@@ -85,9 +95,13 @@ class MixAdmin(admin.ModelAdmin):
     list_filter = (
         'verified',
         'updated_at',
+        'ingredients',
     )
     search_fields = ('name',)
-    actions = (set_volume_to_20cL, set_volume_to_30cL)
+    actions = (
+        set_volume_to_20cL,
+        set_volume_to_30cL
+    )
 
     def volume(self, obj):
         return obj.volume
