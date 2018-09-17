@@ -40,6 +40,7 @@ CONVERSIONS = {  # to cL approximately
 }
 
 REPLACING = (
+    ('1 1/2', '1.5'),
     ('1/2', '0.5'),
     ('3/4', '0.75'),
     ('1/8', '0.125'),
