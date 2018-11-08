@@ -1,5 +1,11 @@
+# project deps
 Django==2.1
+
+# recipes app deps
 Pillow
 urllib3
 certifi
 python-Levenshtein
+
+# hardware app deps
+gpiozero
