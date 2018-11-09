@@ -4,7 +4,8 @@ os.environ['GPIOZERO_PIN_FACTORY'] = os.environ.get('GPIOZERO_PIN_FACTORY', 'moc
 import math
 import string
 
-from gpiozero import SourceMixin, CompositeDevice, DigitalOutputDevice, GPIOPinMissing, CompositeDeviceBadOrder, GPIOZeroError
+from gpiozero import SourceMixin, CompositeDevice, DigitalOutputDevice
+from gpiozero import GPIOPinMissing, CompositeDeviceBadOrder, GPIOZeroError
 
 
 class DeMultiplexerNBits(SourceMixin, CompositeDevice):
@@ -19,7 +20,8 @@ class DeMultiplexerNBits(SourceMixin, CompositeDevice):
     starting at A). The output pin takes the COM value when INH is low.
     You can set the COM using the value property.
 
-    To control 8 outputs, you will need to set a, b, and c pins.
+    To control 8 outputs, you will need to set a, b, and c pins. 16 outputs
+    requires an additional d pin.
 
     See::
         https://en.wikipedia.org/wiki/Multiplexer
@@ -39,20 +41,27 @@ class DeMultiplexerNBits(SourceMixin, CompositeDevice):
         time.sleep(1)
         demux8.inhibit = True
 
-    :param int forward:
-        The GPIO pin that the forward input of the motor driver chip is
-        connected to.
+    :param int n:
+        Number of outputs you would like to control. Usually a power of 2
+        like 4, 8 or 16.
 
-    :param int backward:
-        The GPIO pin that the backward input of the motor driver chip is
-        connected to.
+    :param int inh:
+        The GPIO pin connected to the inhibit pin.
 
-    :param bool pwm:
-        If ``True`` (the default), construct :class:`PWMOutputDevice`
-        instances for the motor controller pins, allowing both direction and
-        variable speed control. If ``False``, construct
-        :class:`DigitalOutputDevice` instances, allowing only direction
-        control.
+    :param int a,b,c,d...:
+        The GPIO pins connected to the A, B, C, etc pins. They encode the active
+        channel.
+
+    :param bool use_com:
+        Set to whether you are controlling the COM pin yourself. Use ``False``
+        if for example you connected your pin to Vss or Ground.
+
+    :param int com:
+        Eventual GPIO pin connected to the COM pin. Required only if `use_com`
+        is ``True``.
+
+    :param int initial_inhibit:
+        Defaults to ``True``. The value taken initially by the INH pin.
 
     :param Factory pin_factory:
         See :doc:`api_pins` for more information (this is an advanced feature
@@ -63,13 +72,14 @@ class DeMultiplexerNBits(SourceMixin, CompositeDevice):
         if n < 2 or n > 67108864:
             raise ValueError(
                 "Impossible to control %i outputs with this class" % n
-            )  # above 16 outputs you will need
+            )  # the pins' names are letters, so 2**26 outputs maximum
         self._nb_inputs = self._how_many_inputs_for_n_bits(n)
         self._named_inputs = list(string.ascii_lowercase)[:self._nb_inputs]
-        expected_pins = ['inhibit'] + use_com * ['com'] + self._named_inputs
-        devices = dict([(name, DigitalOutputDevice(value, pin_factory=pin_factory)) for name, value in kwargs.items()])
-
-        # TODO catch errors when incorrect kwargs are given (KeyError or CompositeDeviceBadOrder)
+        expected_pins = ['inh'] + use_com * ['com'] + self._named_inputs
+        devices = dict([
+            (name, DigitalOutputDevice(value, pin_factory=pin_factory))
+            for name, value in kwargs.items()
+        ])
 
         try:
             super(DeMultiplexerNBits, self).__init__(
@@ -85,7 +95,7 @@ class DeMultiplexerNBits(SourceMixin, CompositeDevice):
             raise GPIOZeroError(
                 "You are giving too many inputs to control the de-multiplexer"
             )
-        self.inhibit.value = initial_inhibit
+        self.inhibit = initial_inhibit
 
     @staticmethod
     def _how_many_inputs_for_n_bits(n):
@@ -108,10 +118,25 @@ class DeMultiplexerNBits(SourceMixin, CompositeDevice):
         Returns ``True`` if the demux is not inhibited and ``False``
         otherwise.
         """
-        return not self.inhibit.value
+        return not self.inhibit
+
+    @property
+    def inhibit(self):
+        """
+        Shortcut to the value of the INH pin.
+        :return: The current inhibition state.
+        """
+        return self.inh.value
+
+    @inhibit.setter
+    def inhibit(self, value):
+        self.inh.value = value
 
     @property
     def _state(self):
+        """
+        String coding the internal binary encoded channel. Output 3 active is '011'.
+        """
         return ''.join([str(int(self.__getattr__(name).value)) for name in self._named_inputs[::-1]])
 
     def write(self, output):
@@ -133,7 +158,14 @@ class DeMultiplexerNBits(SourceMixin, CompositeDevice):
 
 
 if __name__ == "__main__":
-    demux8 = DeMultiplexerNBits(8, inhibit=0, a=1, b=2, c=3)
+    import time
+    demux8 = DeMultiplexerNBits(8, inh=0, a=1, b=2, c=3)
     for output in range(8):
         demux8.write(output)
         print(output, demux8._state)
+        demux8.inhibit = False
+        print(" on")
+        time.sleep(3)
+        demux8.inhibit = True
+        print(" off")
+        time.sleep(5)
