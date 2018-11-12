@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+from collections import OrderedDict
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -38,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'recipes',
+    'hardware',
 ]
 
 MIDDLEWARE = [
@@ -125,10 +127,40 @@ MEDIA_URL = '/media/'
 
 UPLOAD_FOR_MIX = 'mixes'
 
+
 # Settings for the bar configuration
-PUMPS_NB = 10
 INTERFACE_USE_DUMMY = True
 
+# PINS
+GPIO_INHIBIT1 = 29
+GPIO_INHIBIT2 = 36
+GPIO_A1 = 31
+GPIO_B1 = 33
+GPIO_C1 = 35
+GPIO_A2 = 38
+
+# PINOUT
+DEMUX = (
+    {
+        'inh': GPIO_INHIBIT1,
+        'logic': (
+            GPIO_A1,
+            GPIO_B1,
+            GPIO_C1
+        ),
+    },
+    {
+        'inh': GPIO_INHIBIT2,
+        'logic': (
+            GPIO_A2,
+        ),
+    }
+)
+
+PUMPS_NB = sum([2**len(d['logic']) for d in DEMUX])
+
+
+# Database settings and parameters
 UNIT_DENSITY = 'g/L'
 UNIT_DENSITY_DEFAULT = 1000  # default density for liquids in [UNIT_DENSITY]
 UNIT_VOLUME = 'cL'
