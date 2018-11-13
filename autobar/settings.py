@@ -143,23 +143,21 @@ GPIO_A2 = 38
 DEMUX = (
     {
         'inh': GPIO_INHIBIT1,
-        'logic': {
-            'a': GPIO_A1,
-            'b': GPIO_B1,
-            'c': GPIO_C1
-        },
-        'outputs': 8,
+        'logic': (
+            GPIO_A1,
+            GPIO_B1,
+            GPIO_C1
+        ),
     },
     {
         'inh': GPIO_INHIBIT2,
-        'logic': {
-            'a': GPIO_A2,
-        },
-        'outputs': 2
+        'logic': (
+            GPIO_A2,
+        ),
     }
 )
 
-PUMPS_NB = sum([d['outputs'] for d in DEMUX])
+PUMPS_NB = sum([2**len(d['logic']) for d in DEMUX])
 
 
 # Database settings and parameters

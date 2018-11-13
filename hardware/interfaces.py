@@ -3,14 +3,14 @@ from itertools import count
 
 from autobar import settings
 from hardware.singletonmixin import Singleton
-from hardware.demultiplexer import DeMultiplexerNBits
+from hardware.demultiplexer import DeMultiplexer
 
 
 class GpioInterface(Singleton):
     def __init__(self):
         config_demux = settings.DEMUX
         self._demux = [
-            DeMultiplexerNBits(c['outputs'], inh=c['inh'], **c['logic'])
+            DeMultiplexer(*c['logic'], inh=c['inh'])
             for c in config_demux
         ]
         self._outputs_mapping, offset = {}, 0
