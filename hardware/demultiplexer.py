@@ -2,7 +2,7 @@ import os
 os.environ['GPIOZERO_PIN_FACTORY'] = os.environ.get('GPIOZERO_PIN_FACTORY', 'mock')
 
 import string
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 from gpiozero import SourceMixin, CompositeDevice, DigitalOutputDevice
 
@@ -31,9 +31,9 @@ class DeMultiplexer(SourceMixin, CompositeDevice):
         from time import sleep
 
         demux8 = DeMultiplexer(1, 2, 3, inh=0)
-        print(demux8.value)  # (False, False, False) or 000
+        print(demux8.value)  # DeMultiplexerValue(a=False, b=False, c=False) or 000
         demux8.write(3)
-        print(demux8.value)  # (True, True, False) or 011
+        print(demux8.value)  # DeMultiplexerValue(a=True, b=True, c=False) or 011
         demux8.inhibit = False
         sleep(1)
         demux8.inhibit = True
@@ -58,6 +58,10 @@ class DeMultiplexer(SourceMixin, CompositeDevice):
         See :doc:`api_pins` for more information (this is an advanced feature
         which most users can ignore).
     """
+
+    # see https://gpiozero.readthedocs.io/en/stable/source_values.html#composite-devices
+    DeMultiplexerValue = None
+
     def __init__(self, *args, inh, com=None, initial_inhibit=True, pin_factory=None):
         self.n = 2 ** len(args)
         self._inputs = OrderedDict([
@@ -73,18 +77,19 @@ class DeMultiplexer(SourceMixin, CompositeDevice):
                 pin_factory=pin_factory
         )
         self.inhibit = initial_inhibit
+        self.DeMultiplexerValue = namedtuple('DeMultiplexerValue', self._inputs.keys())
 
     @property
     def value(self):
         """
         :return: The current binary encoding.
         """
-        return tuple(device.value for device in self._inputs.values())
+        return self.DeMultiplexerValue(*tuple(device.value for device in self._inputs.values()))
 
     @value.setter
-    def value(self, values):
-        for value, device in zip(values, self._inputs.values()):
-            device.value = value
+    def value(self, value):
+        for internal_value, device in zip(value, self._inputs.values()):
+            device.value = internal_value
 
     @property
     def is_active(self):
