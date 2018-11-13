@@ -1,5 +1,5 @@
 # project deps
-Django==2.1
+Django==2.1.2
 
 # recipes app deps
 Pillow
