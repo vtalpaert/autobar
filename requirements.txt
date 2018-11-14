@@ -9,3 +9,5 @@ python-Levenshtein
 
 # hardware app deps
 gpiozero
+rpi-gpio
+

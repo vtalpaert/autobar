@@ -1,6 +1,3 @@
-import os
-os.environ['GPIOZERO_PIN_FACTORY'] = os.environ.get('GPIOZERO_PIN_FACTORY', 'mock')
-
 import string
 from collections import OrderedDict, namedtuple
 
