@@ -10,8 +10,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         interface = GpioInterface.getInstance()
-        try:
-            while True:
+        while True:
+            try:
                 output = int(input('Output number: '))
                 t = float(input('Time [s]: '))
                 interface.demux_start(output)
@@ -19,6 +19,6 @@ class Command(BaseCommand):
                 sleep(t)
                 interface.demux_stop(output=output)
                 print('demux: %i is off' % output)
-        finally:
-            print('demux: all stop')
-            interface.demux_stop()
+            finally:
+                print('demux: all stop')
+                interface.demux_stop()
