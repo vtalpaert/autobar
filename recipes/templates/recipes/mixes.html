@@ -18,5 +18,22 @@
 {% block dashboard_active %}active{% endblock %}
 
 {% block content %}
-
+<nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarCollapse">
+    <ul class="navbar-nav mr-auto">
+    {% for sort_type in sorts %}
+       {% comment %}{% with sort_dict=objects|get_item:sort_type %}{% endcomment %}
+          <li class="nav-item">
+            <a class="nav-link {% if sort_type == sort_by %}text-dark{% else %}text-muted{% endif %}" href="{% url 'mixes_s' sort_type %}">{{ sort_type }}</a>
+          </li>
+       {% comment %}{% endwith %}{% endcomment %}
+    {% empty %}
+          <li>No sorts.</li>
+    {% endfor %}
+    </ul>
+  </div>
+</nav>
 {% endblock %}
