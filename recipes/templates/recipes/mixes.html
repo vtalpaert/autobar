@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% load i18n %}
 
 {% block title %}Autobar - Mixes{% endblock %}
@@ -19,9 +20,9 @@
 
 {% block content %}
 <nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
-  {% comment %}<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sorts" aria-controls="sorts" aria-expanded="false" aria-label="Sorts">
     <span class="navbar-toggler-icon"></span>
-  </button>{% endcomment %}
+  </button>
   <div class="collapse navbar-collapse" id="sorts">
     <ul class="navbar-nav mr-auto">
     {% for sort_type in sorts %}
@@ -38,6 +39,9 @@
 </nav>
 
 <nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#subsorts" aria-controls="subsorts" aria-expanded="false" aria-label="Subsorts">
+    <span class="navbar-toggler-icon"></span>
+  </button>
   <div class="collapse navbar-collapse" id="subsorts">
     <ul class="navbar-nav mr-auto">
     {% for subsort_type in subsorts %}
@@ -50,5 +54,78 @@
     </ul>
   </div>
 </nav>
+
+
+<main role="main">
+{% comment %}
+  <section class="jumbotron text-center">
+    <div class="container">
+      <h1 class="jumbotron-heading">Album example</h1>
+      <p class="lead text-muted">Something short and leading about the collection below—its contents, the creator, etc. Make it short and sweet, but not too short so folks don't simply skip over it entirely.</p>
+      <p>
+        <a href="#" class="btn btn-primary my-2">Main call to action</a>
+        <a href="#" class="btn btn-secondary my-2">Secondary action</a>
+      </p>
+    </div>
+  </section>
+{% endcomment %}
+  <div class="album py-5 bg-light">
+    <div class="container">
+      {% for mix in mixes %}
+      <div class="row">
+        <div class="col-md-4">
+          <div class="card mb-4 shadow-sm">
+            <img class="card-img-top" src="{{ MEDIA_URL }}{{ mix.image }}" alt="Card image cap">
+            <div class="card-body">
+              <h2>{{ mix }}</h2>
+              <p class="card-text">{{ mix.description }}</p>
+              <div class="d-flex justify-content-between align-items-center">
+                   <!-- Modal HTML -->
+                  <a href="#view{{ mix.id }}" class="btn btn-sm btn-outline-secondary" data-toggle="modal">View</a>
+                  <div id="view{{ mix.id }}" class="modal fade">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h4 class="modal-title">{{ mix }}</h4>
+                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Ingredients:
+                               <ul class="navbar-nav mr-auto">
+                                {% for dose in mix.ordered_doses %}
+                                      <li class="nav-item">
+                                        {{ dose }}
+                                      </li>
+                                {% empty %}
+                                      <li>No ingredients.</li>
+                                {% endfor %}
+                                </ul>
+                                </p>
+                               <p>{{ mix.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+
+                {% comment %}<div class="btn-group">
+                  <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+
+                  <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+
+                </div>{% endcomment %}
+                <small class="text-muted">{{ mix.likes }} likes, served {{ mix.count }} times.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+          No mixes.
+      {% endfor %}
+    </div>
+  </div>
+
+</main>
+
 
 {% endblock %}
