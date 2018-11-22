@@ -19,10 +19,10 @@
 
 {% block content %}
 <nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+  {% comment %}<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
-  </button>
-  <div class="collapse navbar-collapse" id="navbarCollapse">
+  </button>{% endcomment %}
+  <div class="collapse navbar-collapse" id="sorts">
     <ul class="navbar-nav mr-auto">
     {% for sort_type in sorts %}
        {% comment %}{% with sort_dict=objects|get_item:sort_type %}{% endcomment %}
@@ -36,4 +36,19 @@
     </ul>
   </div>
 </nav>
+
+<nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
+  <div class="collapse navbar-collapse" id="subsorts">
+    <ul class="navbar-nav mr-auto">
+    {% for subsort_type in subsorts %}
+          <li class="nav-item">
+            <a class="nav-link {% if subsort_type == subsort_by %}text-dark{% else %}text-muted{% endif %}" href="{% url 'mixes_ss' sort_by subsort_type %}">{{ subsort_type }}</a>
+          </li>
+    {% empty %}
+          <li>No subsorts.</li>
+    {% endfor %}
+    </ul>
+  </div>
+</nav>
+
 {% endblock %}
