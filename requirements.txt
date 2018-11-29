@@ -1,5 +1,6 @@
 # project deps
 Django==2.1.2
+django-solo
 
 # recipes app deps
 Pillow

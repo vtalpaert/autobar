@@ -1,4 +1,5 @@
 from django.contrib import admin
+from solo.admin import SingletonModelAdmin
 
 from recipes.models import *
 from autobar import settings
@@ -58,6 +59,8 @@ class DoseAdmin(admin.ModelAdmin):
         'number',
         'required',
     )
+    search_fields = ('mix__name',)
+    ordering = ('mix', 'number')
 
 
 class DoseInline(admin.TabularInline):
@@ -120,3 +123,9 @@ class DispenserAdmin(admin.ModelAdmin):
         'is_empty',
         'updated_at',
     )
+    ordering = ('number',)
+
+
+@admin.register(Configuration)
+class ConfigurationAdmin(SingletonModelAdmin):
+    pass

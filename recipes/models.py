@@ -1,6 +1,7 @@
 import os
 
 from django.db import models
+from solo.models import SingletonModel
 from django.utils.text import get_valid_filename
 
 from autobar import settings
@@ -176,3 +177,14 @@ class Dispenser(models.Model):
         limit_choices_to={'added_separately': False},
     )
     is_empty = models.BooleanField()
+
+
+class Configuration(SingletonModel):
+    updated_at = models.DateTimeField(auto_now=True)
+    show_only_available_mixes = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Configuration"
+
+    def __str__(self):
+        return 'Configuration'
