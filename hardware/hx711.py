@@ -3,44 +3,15 @@
 from collections import deque
 import time
 from statistics import median, StatisticsError
+import weakref
 
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 
-import weakref
-from threading import Thread, Event
+from hardware.background_threads import BackgroundThread, Event
 
 
-_THREADS = set()
-def _threads_shutdown():
-    while _THREADS:
-        for t in _THREADS.copy():
-            t.stop()
-
-
-class GPIOThread(Thread):
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):
-        if kwargs is None:
-            kwargs = {}
-        self.stopping = Event()
-        super(GPIOThread, self).__init__(group, target, name, args, kwargs)
-        self.daemon = True
-
-    def start(self):
-        self.stopping.clear()
-        _THREADS.add(self)
-        super(GPIOThread, self).start()
-
-    def stop(self):
-        self.stopping.set()
-        self.join()
-
-    def join(self):
-        super(GPIOThread, self).join()
-        _THREADS.discard(self)
-
-
-class GPIOQueue(GPIOThread):
+class GPIOQueue(BackgroundThread):
     """
     Extends :class:`GPIOThread`. Provides a background thread that monitors a
     device's values and provides a running *average* (defaults to median) of
@@ -74,7 +45,7 @@ class GPIOQueue(GPIOThread):
         try:
             while not self.stopping.wait(self.sample_wait):
                 read = self.parent._read()
-                print(read)
+                #print(read)
                 if read is not False:
                     self.queue.append(read)
                 if not self.full.is_set() and len(self.queue) >= self.queue.maxlen:
@@ -349,7 +320,7 @@ if __name__ == '__main__':
     from collections import deque
     from itertools import count
     dt = deque(maxlen=50)
-    cell = HX711(16, 20)
+    cell = HX711(5, 6)
     cell._debug_mode = True
     while cell.zero() is False:
         print("zero")
