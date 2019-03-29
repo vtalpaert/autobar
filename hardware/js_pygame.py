@@ -3,9 +3,9 @@ import weakref
 import pygame
 
 try:
-    from hardware.background_threads import BackgroundThread, Event
+    from hardware.background_threads import BackgroundThread
 except ImportError:
-    from background_threads import BackgroundThread, Event
+    from background_threads import BackgroundThread
 
 
 class Joystick(BackgroundThread):
@@ -13,7 +13,6 @@ class Joystick(BackgroundThread):
         self._init_joystick(name)
         super(Joystick, self).__init__(target=self.read)
         self.wait = float(wait)
-        #self.full = Event()
         self.parent = weakref.proxy(parent)
         self.on_pressed = on_pressed
         self.on_released = on_released
@@ -35,10 +34,9 @@ class Joystick(BackgroundThread):
         try:
             while not self.stopping.wait(self.wait):
                 for event in pygame.event.get():
-                    # Possible joystick actions: JOYAXISMOTION JOYBALLMOTION JOYBUTTONDOWN JOYBUTTONUP JOYHATMOTION
-                    if event.type == pygame.JOYBUTTONDOWN:
+                    if event.type == pygame.JOYBUTTONDOWN and self.on_pressed:
                         getattr(self.parent, self.on_pressed)(event.button)
-                    elif event.type == pygame.JOYBUTTONUP:
+                    elif event.type == pygame.JOYBUTTONUP and self.on_released:
                         getattr(self.parent, self.on_released)(event.button)
         except ReferenceError:
             # Parent is dead; time to die!
@@ -65,5 +63,7 @@ class TestInterface(object):
 
 if __name__ == '__main__':
     test = TestInterface("DragonRise Inc.   Generic   USB  Joystick  ")
-    while True:
-        pass
+    from time import sleep
+    for i in range(10):
+        print(i)
+        sleep(1)

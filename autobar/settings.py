@@ -134,15 +134,50 @@ UPLOAD_FOR_MIX = 'mixes'
 
 
 # Settings for the bar configuration
-INTERFACE_USE_DUMMY = True
+INTERFACE_USE_DUMMY = False
+
+WEIGHT_CELL_DEFAULT = {
+    'A': {
+        128: {
+            'offset': 0,
+            'ratio': 1,
+        },
+        64: {
+            'offset': 0,
+            'ratio': 1,
+        },
+    },
+    'B': {
+        32: {
+            'offset': 0,
+            'ratio': 1,
+        },
+    },
+}
+
+JOYSTICK_NAME = 'DragonRise Inc.   Generic   USB  Joystick  '
+BUTTONS_TO_PUMP_MAPPING = {
+    2: 0,
+    3: 1,
+    4: 2,
+    5: 3,
+    6: 4,
+    7: 5,
+    8: 6,
+    9: 7,
+    10: 8,
+    11: 9,
+}
 
 # PINS
 GPIO_INHIBIT1 = 5
 GPIO_INHIBIT2 = 16
 GPIO_A1 = 6
-GPIO_B1 = 13
-GPIO_C1 = 19
-GPIO_A2 = 20
+GPIO_B1 = 12
+GPIO_C1 = 13
+GPIO_A2 = 26
+GPIO_DT = 17
+GPIO_SCK = 18
 
 # PINOUT
 DEMUX = (

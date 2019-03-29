@@ -2,14 +2,14 @@ from time import sleep
 
 from django.core.management.base import BaseCommand
 
-from hardware.interfaces import GpioInterface
+from hardware.interfaces import HardwareInterface
 
 
 class Command(BaseCommand):
     help = 'Manually control the demux'
 
     def handle(self, *args, **options):
-        interface = GpioInterface.getInstance()
+        interface = HardwareInterface.getInstance()
         while True:
             try:
                 output = int(input('Output number: '))

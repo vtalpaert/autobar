@@ -284,7 +284,7 @@ class HX711(object):
     def get_weight(self):
         result = self.value
         if result is not False:
-            return float((result - self.offset) / self.ratio)
+            return float((result - self.offset) * self.ratio)
         else:
             return False
 
@@ -319,9 +319,11 @@ class HX711(object):
 if __name__ == '__main__':
     from collections import deque
     from itertools import count
+    from time import sleep
     dt = deque(maxlen=50)
-    cell = HX711(5, 6)
+    cell = HX711(17, 18)
     cell._debug_mode = True
+    sleep(1)
     while cell.zero() is False:
         print("zero")
     while True:
