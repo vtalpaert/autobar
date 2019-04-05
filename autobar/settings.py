@@ -85,6 +85,46 @@ DATABASES = {
 }
 
 
+# Logging for Django
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt': "%d/%b/%Y %H:%M:%S"
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': 'autobar.log',  # TODO
+            'formatter': 'verbose',
+            'when': 'midnight',
+            'backupCount': '15',
+        },
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'INFO',
+        },
+        'autobar': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    }
+}
+
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
 
@@ -136,25 +176,6 @@ UPLOAD_FOR_MIX = 'mixes'
 # Settings for the bar configuration
 INTERFACE_USE_DUMMY = False
 
-WEIGHT_CELL_DEFAULT = {
-    'A': {
-        128: {
-            'offset': 0,
-            'ratio': 1,
-        },
-        64: {
-            'offset': 0,
-            'ratio': 1,
-        },
-    },
-    'B': {
-        32: {
-            'offset': 0,
-            'ratio': 1,
-        },
-    },
-}
-
 JOYSTICK_NAME = 'DragonRise Inc.   Generic   USB  Joystick  '
 BUTTONS_TO_PUMP_MAPPING = {
     2: 0,
@@ -199,6 +220,32 @@ DEMUX = (
 
 PUMPS_NB = sum([2**len(d['logic']) for d in DEMUX])
 
+WEIGHT_CELL_DEFAULT = {
+    'A': {
+        128: {
+            'offset': 0,
+            'ratio': 1,
+        },
+        64: {
+            'offset': 0,
+            'ratio': 1,
+        },
+    },
+    'B': {
+        32: {
+            'offset': 0,
+            'ratio': 1,
+        },
+    },
+}
+
+WEIGHT_CELL_GLASS_DETECTION_VALUE = 10  # value for scale (unit depends on WEIGHT_CELL_DEFAULT)
+WEIGHT_CELL_GLASS_DETECTION_TIMEOUT = 10  # [s] abandon glass detection
+ALLOW_NO_GLASS_DETECTION = False  # continue if glass not detected
+WEIGHT_CELL_SERVING_TIMEOUT = 10  # [s] anomaly while serving threshold
+DELAY_BEFORE_SERVING = 2  # [s] delay between glass detection and starting to serve
+DELAY_BETWEEN_SERVINGS = 1  # [s] delay between one pump activating and the next one
+WEIGHT_CELL_MINIMUM_DETECTION = 1  # smallest detection (unit depends on WEIGHT_CELL_DEFAULT)
 
 # Database settings and parameters
 UNIT_DENSITY = 'g/L'
