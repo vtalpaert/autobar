@@ -6,6 +6,7 @@ from django.utils.text import get_valid_filename
 
 from autobar import settings
 DISPENSER_CHOICES = [(i, i) for i in range(settings.PUMPS_NB)]
+DEFAULT_IGNORE_EMPTY = True
 
 
 def _cut(value, low=None, high=None):
@@ -29,6 +30,9 @@ class Ingredient(models.Model):
         default=False,
     )
 
+    class Meta:
+        ordering = ('name',)
+
     def save(self, *args, **kwargs):
         self.alcohol_percentage = _cut(self.alcohol_percentage, low=0, high=100)
         self.density = _cut(self.density, low=0)
@@ -37,8 +41,22 @@ class Ingredient(models.Model):
     def __str__(self):
         return self.name
 
-    def is_available(self):
-        return self.dispenser_set.filter(is_empty=False).exists()
+    def is_available(self, ignore_empty=DEFAULT_IGNORE_EMPTY):
+        dispensers = self.dispenser_set.all()
+        if not ignore_empty:
+            dispensers = dispensers.filter(is_empty=False)
+        return self.added_separately or dispensers.exists()
+
+    @staticmethod
+    def available_ingredients(ignore_empty=DEFAULT_IGNORE_EMPTY, include_added_separately=True):
+        dispensers = Dispenser.objects.all()
+        if not ignore_empty:
+            dispensers = dispensers.filter(is_empty=False)
+        ingredients_in_dispensers = dispensers.values_list('ingredient', flat=True)
+        if include_added_separately:
+            return ingredients_in_dispensers.union(Ingredient.objects.filter(added_separately=True))
+        else:
+            return ingredients_in_dispensers
 
 
 def mix_upload_to(instance, filename):
@@ -117,11 +135,8 @@ class Mix(models.Model):
         q_and_d = self.doses.values_list('quantity', 'ingredient__density')
         return sum(map(lambda qd: qd[0] * settings.UNIT_CONVERSION_VOLUME_SI * qd[1], q_and_d))
 
-    def is_available(self):
-        doses = self.doses
-        if not doses:
-            return False
-        return all(dose.is_available() for dose in doses)
+    def is_available(self, ignore_empty=DEFAULT_IGNORE_EMPTY):
+        return all(ingredient.is_available(ignore_empty=ignore_empty) for ingredient in self.ingredients.all())
 
     def calibrate_volume_to(self, desired_total):
         """Look out you respect the correct units"""
@@ -129,6 +144,37 @@ class Mix(models.Model):
         for dose in self.doses:
             dose.quantity = dose.quantity * desired_total / volume
             dose.save()
+
+    @staticmethod
+    def filter_by_available(mixes=None, ignore_empty=DEFAULT_IGNORE_EMPTY):
+        available_ingredients_in_dispenser = list(Ingredient.available_ingredients(
+            ignore_empty=ignore_empty,
+            include_added_separately=False
+        ))
+        mixes = mixes if mixes is not None else Mix.objects.all()
+        mixes_with_at_least_one_ingredient = mixes.filter(
+            ingredients__in=available_ingredients_in_dispenser
+        )
+        print(len(mixes_with_at_least_one_ingredient))
+        at_least_one, naive = Mix.naive_available(mixes_with_at_least_one_ingredient, ignore_empty), Mix.naive_available(ignore_empty=ignore_empty)
+        print(set(at_least_one) - set(naive), len(at_least_one), at_least_one)
+        print(set(naive) - set(at_least_one) , len(naive), naive)
+        return filter(
+            lambda mix: all(
+                ingredient.added_separately or ingredient in available_ingredients_in_dispenser
+                for ingredient in mix.ingredients.all()
+            ),
+            mixes_with_at_least_one_ingredient
+        )
+
+    @staticmethod
+    def naive_available(mixes=None, ignore_empty=DEFAULT_IGNORE_EMPTY):
+        mixes = mixes if mixes is not None else Mix.objects.all()
+        available = []
+        for mix in mixes:
+            if mix.is_available(ignore_empty=ignore_empty):
+                available.append(mix)
+        return available
 
 
 class Dose(models.Model):
@@ -152,7 +198,7 @@ class Dose(models.Model):
         super(Dose, self).save(*args, **kwargs)
 
     def is_available(self):
-        return self.ingredient.is_available() if self.required else True
+        return self.ingredient.is_available()  # if self.required else True
 
     def set_quantity_to_zero_if_not_required(self):
         if self.ingredient.added_separately:
@@ -174,9 +220,13 @@ class Dispenser(models.Model):
         Ingredient,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         limit_choices_to={'added_separately': False},
     )
     is_empty = models.BooleanField()
+
+    def __str__(self):
+        return 'Dispenser {} with {}'.format(self.number, self.ingredient)
 
 
 class Configuration(SingletonModel):
