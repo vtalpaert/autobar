@@ -141,6 +141,13 @@ class HardwareInterface(Singleton):
     def cell_zero(self):
         return self._cell.zero()
 
+    def cell_raw_value(self):
+        return self._cell.value
+
+    def cell_reset(self):
+        self._cell.ratio = 1
+        self._cell.offset = 0
+
     def cell_set_ration(self, actual_weight):
         self._cell.ratio = actual_weight / self._cell.get_data()
 
