@@ -225,8 +225,8 @@ PUMPS_NB = sum([2**len(d['logic']) for d in DEMUX])
 WEIGHT_CELL_DEFAULT = {
     'A': {
         128: {
-            'offset': 0,
-            'ratio': 1,
+            'offset': -125596.5,
+            'ratio': -0.0003936631806248245,
         },
         64: {
             'offset': 0,
