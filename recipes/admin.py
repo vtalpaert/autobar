@@ -126,6 +126,23 @@ class DispenserAdmin(admin.ModelAdmin):
     ordering = ('number',)
 
 
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = (
+        'created_at',
+        'updated_at',
+        'status',
+        'accepted',
+        'mix',
+    )
+    list_filter = (
+        'accepted',
+        'status',
+        'updated_at',
+        'created_at',
+    )
+
+
 @admin.register(Configuration)
 class ConfigurationAdmin(SingletonModelAdmin):
     pass

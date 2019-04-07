@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+from collections import OrderedDict
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,7 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'solo',
     'recipes',
-    'hardware',
+    'hardware.apps.HardwareConfig',
 ]
 
 MIDDLEWARE = [
@@ -175,6 +176,7 @@ UPLOAD_FOR_MIX = 'mixes'
 
 # Settings for the bar configuration
 INTERFACE_USE_DUMMY = False
+IGNORE_EMPTY_DISPENSER = False
 
 JOYSTICK_NAME = 'DragonRise Inc.   Generic   USB  Joystick  '
 BUTTONS_TO_PUMP_MAPPING = {
@@ -254,3 +256,17 @@ UNIT_VOLUME = 'cL'
 UNIT_VOLUME_VERBOSE = 'centiliter'
 UNIT_MASS = 'g'
 UNIT_CONVERSION_VOLUME_SI = 1e-2  # from UNIT_VOLUME to SI
+
+# hardware states
+INTERFACE_STATES = {
+    0: 'Free',
+    1: 'Manual',
+    2: 'Controlled',
+}
+
+SERVING_STATES_CHOICES = (
+    (0, 'Empty'),
+    (1, 'Waiting for glass'),
+    (2, 'Serving'),
+    (3, 'Done'),
+)

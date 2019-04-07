@@ -1,12 +1,12 @@
 import os
 
 from django.db import models
-from solo.models import SingletonModel
+import solo.models
 from django.utils.text import get_valid_filename
 
 from autobar import settings
 DISPENSER_CHOICES = [(i, i) for i in range(settings.PUMPS_NB)]
-DEFAULT_IGNORE_EMPTY = True
+DEFAULT_IGNORE_EMPTY = settings.IGNORE_EMPTY_DISPENSER
 
 
 def _cut(value, low=None, high=None):
@@ -41,11 +41,14 @@ class Ingredient(models.Model):
     def __str__(self):
         return self.name
 
-    def is_available(self, ignore_empty=DEFAULT_IGNORE_EMPTY):
+    def dispensers(self, ignore_empty):
         dispensers = self.dispenser_set.all()
         if not ignore_empty:
             dispensers = dispensers.filter(is_empty=False)
-        return self.added_separately or dispensers.exists()
+        return dispensers
+
+    def is_available(self, ignore_empty=DEFAULT_IGNORE_EMPTY):
+        return self.added_separately or self.dispensers(ignore_empty).exists()
 
     @staticmethod
     def available_ingredients(ignore_empty=DEFAULT_IGNORE_EMPTY, include_added_separately=True):
@@ -228,8 +231,32 @@ class Dispenser(models.Model):
     def __str__(self):
         return 'Dispenser {} with {}'.format(self.number, self.ingredient)
 
+    def save(self, *args, **kwargs):
+        if not self.ingredient:
+            self.is_empty = True
+        super(Dispenser, self).save(*args, **kwargs)
 
-class Configuration(SingletonModel):
+
+class Order(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    mix = models.ForeignKey(
+        Mix,
+        on_delete=models.SET_NULL,  # keep command in history even in mix is deleted
+        null=True,
+        blank=True,
+    )
+    status = models.PositiveSmallIntegerField(choices=settings.SERVING_STATES_CHOICES, default=0)
+    accepted = models.BooleanField(default=False)
+
+    def __str__(self):
+        if self.mix:
+            return 'Order of one {}'.format(self.mix)
+        else:
+            return 'Empty order'
+
+
+class Configuration(solo.models.SingletonModel):
     updated_at = models.DateTimeField(auto_now=True)
     show_only_available_mixes = models.BooleanField(default=False)
 

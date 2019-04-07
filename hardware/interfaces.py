@@ -1,4 +1,3 @@
-from collections import namedtuple, OrderedDict
 from itertools import count
 from threading import Lock
 import time
@@ -13,31 +12,26 @@ try:
     CELL_AVAILABLE = True
 except RuntimeError:
     CELL_AVAILABLE = False
+
+    class DummyCell:
+        weight = 0
+
+        def get_weight(self):
+            self.weight += 1
+            return self.weight
+
 from hardware.js_pygame import Joystick
 
 logger = logging.getLogger('autobar')
 
-INTERFACE_STATES = {
-    0: 'free',
-    1: 'manual',
-    2: 'controlled',
-}
-
-SCALE_STATES = OrderedDict((
-    (0, 'empty'),
-    (1, 'waiting_for_glass'),
-    (2, 'serving'),
-    (3, 'done'),
-))
-
 
 class HardwareInterface(Singleton):
     def __init__(self):
+        print('Interface id', id(self))
         self._state_mutex = Lock()
         self._state = 0
         self._last_button = None
-        self._scale = 0
-        #self._pump_states = dict(((pump_id, False) for pump_id in range(settings.PUMPS_NB)))
+        self._last_order = None
 
         # de-multiplexers
         config_demux = settings.DEMUX
@@ -61,17 +55,22 @@ class HardwareInterface(Singleton):
             defaults = settings.WEIGHT_CELL_DEFAULT[self._cell.channel][self._cell.gain]
             self._cell.ratio = defaults['ratio']
             self._cell.offset = defaults['offset']
+        elif settings.INTERFACE_USE_DUMMY:
+            self._cell = DummyCell()
         else:
             self._cell = None
 
         # buttons
-        self._joy = Joystick(
-            self,
-            name=settings.JOYSTICK_NAME,
-            on_pressed='_button_pressed',
-            on_released='_button_released'
-        )
-        self._joy.start()
+        try:
+            self._joy = Joystick(
+                self,
+                name=settings.JOYSTICK_NAME,
+                on_pressed='_button_pressed',
+                on_released='_button_released'
+            )
+            self._joy.start()
+        except ValueError as e:
+            print(e)
 
     @property
     def locked(self):
@@ -83,7 +82,7 @@ class HardwareInterface(Singleton):
 
     @state.setter
     def state(self, state):
-        if not self.locked and state in INTERFACE_STATES and state != self.state:
+        if not self.locked and state in settings.INTERFACE_STATES and state != self.state:
             if state == 0:
                 self._state_mutex.release()
                 self._state = 0
@@ -91,17 +90,6 @@ class HardwareInterface(Singleton):
                 self._state = state
             else:
                 logger.error('Interface could not change state from %s to %s' % (self.state, state))
-
-    @property
-    def scale_state(self):
-        return self._scale
-
-    @scale_state.setter
-    def scale_state(self, state):
-        if state in SCALE_STATES and state == (self.scale_state + 1) % 4:
-            self._scale = state
-        else:
-            raise ValueError('Invalid scale state')
 
     def demux_write(self, output, inhibit=True):
         try:
@@ -164,69 +152,112 @@ class HardwareInterface(Singleton):
             time.sleep(wait_secs)
         return True
 
-    def controlled_serve(self, pump_n_weight: list):
-        if self.state == 0 and self.scale_state == 0:
-            self.state = 3  # locks state
-            self.scale_state = 1  # waiting for glass
-            if self.state != 3:
-                logger.critical(
-                    'Trying to serve in controlled state, but there is a state lock error (locked: %s, state:%s!'
-                    % (str(self.locked), str(self.state))
-                )
-                self.scale_state = 0
-                self.state = 0  # damage control
-                return False
-            glass_detected = self.cell_wait_for_weight_total(
-                settings.WEIGHT_CELL_GLASS_DETECTION_VALUE,
-                timeout=settings.WEIGHT_CELL_GLASS_DETECTION_TIMEOUT,
-                wait_secs=0.01
-            )
-            time.sleep(settings.DELAY_BEFORE_SERVING)
-            glass_detected_weight = self.cell_weight()
-            if not glass_detected and not settings.ALLOW_NO_GLASS_DETECTION:
-                logger.debug('Glass not detected (only %s)' % str(glass_detected_weight))
-                return False
-            self.scale_state = 2  # serving
-            for pump, weight in pump_n_weight:
-                current_weight = self.cell_weight()
-                if weight < settings.WEIGHT_CELL_MINIMUM_DETECTION:
-                    pass
-                try:
-                    self.demux_start(pump)
-                    quantity_reached = self.cell_wait_for_weight_total(
-                        weight + current_weight,
-                        timeout=settings.WEIGHT_CELL_SERVING_TIMEOUT,
-                        wait_secs=0,
-                    )
-                finally:
-                    self.demux_stop(pump)
-                if not quantity_reached:
-                    logger.info(
-                        'Pump %i is not serving within %s. Stopping cocktail'
-                        % (pump, str(settings.WEIGHT_CELL_SERVING_TIMEOUT))
-                    )
-                    self.cell_wait_for_weight_total(
-                        glass_detected_weight + settings.WEIGHT_CELL_MINIMUM_DETECTION,
-                        timeout=None,
-                        wait_secs=1,
-                        reversed_condition=True,
-                    )  # we wait until glass removed
-                    self.scale_state = 0
-                    self.state = 0  # release state lock
-                    return False
-                time.sleep(settings.DELAY_BETWEEN_SERVINGS)
-            logger.debug('Finished serving')
-            self.demux_stop()
-            self.scale_state = 3  # done, wait for glass lifting
-            self.cell_wait_for_weight_total(
-                glass_detected_weight + settings.WEIGHT_CELL_MINIMUM_DETECTION,
-                timeout=None,
-                wait_secs=1,
-                reversed_condition=True,
-            )  # we wait until glass removed
-            self.scale_state = 0
-            self.state = 0  # release state lock
-            return True
-        else:
-            logger.error('Serving in controlled state refused')
-            return False
+    def _wait_for_glass(self):
+        glass_detected = self.cell_wait_for_weight_total(
+            settings.WEIGHT_CELL_GLASS_DETECTION_VALUE,
+            timeout=settings.WEIGHT_CELL_GLASS_DETECTION_TIMEOUT,
+            wait_secs=0.01
+        )
+        time.sleep(settings.DELAY_BEFORE_SERVING)
+        return glass_detected
+
+    def _wait_for_glass_removed(self, glass_weight):
+        self.cell_wait_for_weight_total(
+            glass_weight + settings.WEIGHT_CELL_MINIMUM_DETECTION,
+            timeout=1,
+            wait_secs=1,
+            reversed_condition=True,
+        )
+
+    def order_post_save(self, sender, instance, created, raw, using, update_fields, **kwargs):
+        order = instance
+
+        if created:  # on creation of a new order, change instance state and accept order
+            if self.state == 0 and order.mix and order.mix.is_available():
+                # will move status to 'Waiting for glass'
+                order.accepted, order.status, self._last_order = True, 1, order
+                self.state = 2  # locks state
+                logger.debug('%s was accepted' % order)
+                return order.save()
+            else:
+                logger.error('%s refused (current state: %i, has mix: %s)' % (order, self.state, order.mix is not None))
+                if order.accepted:
+                    order.accepted = False
+                    return order.save()
+                return
+
+        if order.accepted and self._last_order == order and self.state == 2:
+            # current accepted order is processed here
+            if order.status == 1:
+                # will move status to 'Serving'
+                glass_detected = self._wait_for_glass()
+                glass_detected_weight = self.cell_weight()
+                if not glass_detected and not settings.ALLOW_NO_GLASS_DETECTION:
+                    # refused
+                    logger.debug('Glass not detected (only %s)' % str(glass_detected_weight))
+                    order.accepted, self._last_order = False, None
+                    self.state = 0  # abandon this order
+                    return order.save()
+                else:
+                    # status goes to 'Serving' here
+                    order.status = 2  # serving
+                    logger.debug('Glass detected (weight %s)' % str(glass_detected_weight))
+                    return order.save()
+
+            elif order.status == 2:
+                # will move status to 'Done'
+                doses = order.mix.ordered_doses() if order.mix else []
+                logger.debug(str(doses))
+                glass_weight = self.cell_weight()
+
+                for dose in doses:
+                    dispensers_query = dose.ingredient.dispensers(ignore_empty=False)
+                    if not dispensers_query.exists():
+                        # refuse order
+                        logger.error('No available dispenser providing %s. Stopping cocktail.' % dose.ingredient)
+                        order.accepted, self._last_order = False, None
+                        self.state = 0
+                        return order.save()
+                    dispenser, weight = dispensers_query[0], dose.quantity
+                    current_weight = self.cell_weight()
+                    if weight < settings.WEIGHT_CELL_MINIMUM_DETECTION:
+                        logger.debug(
+                            '%s is under WEIGHT_CELL_MINIMUM_DETECTION (%s).'
+                            % (dose, settings.WEIGHT_CELL_MINIMUM_DETECTION)
+                        )
+                        continue  # next dose
+                    try:
+                        self.demux_start(dispenser.number)
+                        quantity_is_reached = self.cell_wait_for_weight_total(
+                            weight + current_weight,
+                            timeout=settings.WEIGHT_CELL_SERVING_TIMEOUT,
+                            wait_secs=0,
+                        )
+                    finally:
+                        self.demux_stop(dispenser.number)
+                    if not quantity_is_reached:
+                        logger.info(
+                            'Pump %i is not serving within %s.'
+                            % (dispenser.number, str(settings.WEIGHT_CELL_SERVING_TIMEOUT))
+                        )
+                        if self.cell_weight() < current_weight + 2 * settings.WEIGHT_CELL_MINIMUM_DETECTION:
+                            # seems like the dispenser is empty
+                            if not settings.IGNORE_EMPTY_DISPENSER:
+                                dispenser.is_empty = True
+                                dispenser.save()
+
+                        # wait for glass removed
+                        self._wait_for_glass_removed(glass_weight)
+
+                        # abandon
+                        order.accepted = False
+                        self.state = 0
+                        self._last_order = None
+                        return order.save()
+                    time.sleep(settings.DELAY_BETWEEN_SERVINGS)
+                self.demux_stop()
+                logger.info('Served one %s' % order.mix)
+                order.status, self._last_order = 3, None  # done
+                self._wait_for_glass_removed(glass_weight)
+                self.state = 0  # release state lock
+                return order.save()
