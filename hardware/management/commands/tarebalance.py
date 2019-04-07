@@ -13,8 +13,8 @@ class Command(BaseCommand):
         interface.cell_zero()
         weight = float(input('Place a known weight on balance, what should it read [g]: '))
         interface.cell_set_ration(weight)
-        channel, gain = self._cell.channel, self._cell.gain
-        ratio, offset = self._cell.ratio, self._cell.offset
+        channel, gain = interface._cell.channel, interface._cell.gain
+        ratio, offset = interface._cell.ratio, interface._cell.offset
         print(
             'You should configure settings with channel %s, gain %s, offset %s, ratio %s'
             % (channel, gain, offset, ratio)

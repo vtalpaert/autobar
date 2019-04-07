@@ -1,5 +1,8 @@
 import os
-os.environ['GPIOZERO_PIN_FACTORY'] = os.environ.get('GPIOZERO_PIN_FACTORY', 'mock')
+
+from autobar import settings
+if settings.INTERFACE_USE_DUMMY:
+    os.environ['GPIOZERO_PIN_FACTORY'] = os.environ.get('GPIOZERO_PIN_FACTORY', 'mock')
 
 import string
 from collections import OrderedDict, namedtuple
