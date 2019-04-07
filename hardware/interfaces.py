@@ -82,7 +82,7 @@ class HardwareInterface(Singleton):
 
     @state.setter
     def state(self, state):
-        if not self.locked and state in settings.INTERFACE_STATES and state != self.state:
+        if state in settings.INTERFACE_STATES and state != self.state:
             if state == 0:
                 self._state_mutex.release()
                 self._state = 0
