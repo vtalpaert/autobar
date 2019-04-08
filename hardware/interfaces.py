@@ -214,7 +214,7 @@ class HardwareInterface(Singleton):
                     dispensers_query = dose.ingredient.dispensers(ignore_empty=False)
                     if not dispensers_query.exists():
                         # refuse order
-                        logger.error('No available dispenser providing %s. Stopping cocktail.' % dose.ingredient)
+                        logger.error('No available dispenser providing %s. Stopping cocktail' % dose.ingredient)
                         order.accepted, self._last_order = False, None
                         self.state = 0
                         return order.save()
@@ -222,7 +222,7 @@ class HardwareInterface(Singleton):
                     current_weight = self.cell_weight()
                     if weight < settings.WEIGHT_CELL_MINIMUM_DETECTION:
                         logger.debug(
-                            '%s is under WEIGHT_CELL_MINIMUM_DETECTION (%s).'
+                            '%s is under WEIGHT_CELL_MINIMUM_DETECTION (%s)'
                             % (dose, settings.WEIGHT_CELL_MINIMUM_DETECTION)
                         )
                         continue  # next dose
@@ -237,12 +237,13 @@ class HardwareInterface(Singleton):
                         self.demux_stop(dispenser.number)
                     if not quantity_is_reached:
                         logger.info(
-                            'Pump %i is not serving within %s.'
+                            'Pump %i is not serving within %s seconds'
                             % (dispenser.number, str(settings.WEIGHT_CELL_SERVING_TIMEOUT))
                         )
                         if self.cell_weight() < current_weight + 2 * settings.WEIGHT_CELL_MINIMUM_DETECTION:
                             # seems like the dispenser is empty
                             if not settings.IGNORE_EMPTY_DISPENSER:
+                                logger.info('Marked %s as empty' % dispenser)
                                 dispenser.is_empty = True
                                 dispenser.save()
 
@@ -256,7 +257,7 @@ class HardwareInterface(Singleton):
                         return order.save()
                     time.sleep(settings.DELAY_BETWEEN_SERVINGS)
                 self.demux_stop()
-                logger.info('Served one %s' % order.mix)
+                logger.info('Served one %s.' % order.mix)
                 order.status, self._last_order = 3, None  # done
                 self._wait_for_glass_removed(glass_weight)
                 self.state = 0  # release state lock
