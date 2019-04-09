@@ -127,7 +127,8 @@ class HardwareInterface(Singleton):
                 self.state = 0
 
     def cell_zero(self):
-        return self._cell.zero()
+        self._cell.offset = self._cell_mean_over_time(lambda: self._cell.value)
+        return self._cell.offset
 
     def cell_raw_value(self):
         return self._cell.value
@@ -136,8 +137,15 @@ class HardwareInterface(Singleton):
         self._cell.ratio = 1
         self._cell.offset = 0
 
-    def cell_set_ration(self, actual_weight):
-        self._cell.ratio = actual_weight / self._cell.get_data()
+    def cell_set_ratio(self, actual_weight):
+        self._cell.ratio = actual_weight / self._cell_mean_over_time(self._cell.get_data)
+
+    def _cell_mean_over_time(self, fun, seconds=10):
+        data = []
+        for _ in range(10 * seconds):  # for two seconds
+            data.append(fun())
+            time.sleep(0.1)
+        return sum(data) / len(data)
 
     def cell_weight(self):
         return self._cell.get_weight()

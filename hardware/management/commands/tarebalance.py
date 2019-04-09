@@ -12,7 +12,7 @@ class Command(BaseCommand):
         input('Press enter when weight cell is empty')
         interface.cell_zero()
         weight = float(input('Place a known weight on balance, what should it read [g]: '))
-        interface.cell_set_ration(weight)
+        interface.cell_set_ratio(weight)
         channel, gain = interface._cell.channel, interface._cell.gain
         ratio, offset = interface._cell.ratio, interface._cell.offset
         print(
