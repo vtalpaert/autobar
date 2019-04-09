@@ -34,7 +34,7 @@ class Command(BaseCommand):
             if data is False:
                 return
             data = clean_data(data)
-            filename = 'pump%i_queue%i_target%i_%i.csv' % (pump, queue_len, int(target_weight), i)
+            filename = 'pump%i_queue%i_target%i_%s.csv' % (pump, queue_len, int(target_weight), str(i).zfill(3))
 
             with open(filename, 'w') as f:
                 writer = csv.writer(f)
