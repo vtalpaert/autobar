@@ -27,7 +27,7 @@ class Command(BaseCommand):
         target_weight = float(input('Enter a target weight for this experience: '))
         exp_nb = int(input('Enter an experience number: '))
 
-        # self.setup(queue_len)
+        self.setup(queue_len)
         for i in range(exp_nb):
             time.sleep(0.1)
             data = self.serve(pump, target_weight, extra_time=3)
@@ -43,10 +43,10 @@ class Command(BaseCommand):
 
     def setup(self, queue_len):
         self.interface = HardwareInterface.getInstance()
-        self.interface._cell._queue.stop()
-        time.sleep(0.1)
-        self.interface._cell._queue = GPIOQueue(self.interface._cell, queue_len=queue_len, sample_wait=0, partial=True)
-        self.interface._cell._queue.start()
+        #self.interface._cell._queue.stop()
+        #time.sleep(0.1)
+        #self.interface._cell._queue = GPIOQueue(self.interface._cell, queue_len=queue_len, sample_wait=0, partial=True)
+        #self.interface._cell._queue.start()
         time.sleep(0.1)
         self.interface.cell_zero()
 
