@@ -61,16 +61,19 @@ class HardwareInterface(Singleton):
             self._cell = None
 
         # buttons
-        try:
-            self._joy = Joystick(
-                self,
-                name=settings.JOYSTICK_NAME,
-                on_pressed='_button_pressed',
-                on_released='_button_released'
-            )
-            self._joy.start()
-        except ValueError as e:
-            print(e)
+        if not settings.INTERFACE_USE_DUMMY:
+            try:
+                self._joy = Joystick(
+                    self,
+                    name=settings.JOYSTICK_NAME,
+                    on_pressed='_button_pressed',
+                    on_released='_button_released'
+                )
+                self._joy.start()
+            except ValueError as e:
+                print(e)
+        else:
+            self._joy = None
 
     @property
     def locked(self):
