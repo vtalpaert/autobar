@@ -39,7 +39,7 @@ class Command(BaseCommand):
             with open(filename, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows(data)
-            input('Exp %i done, press enter when ready')
+            input('Exp %i done, press enter when ready' % i)
 
     def setup(self, queue_len):
         self.interface = HardwareInterface.getInstance()
