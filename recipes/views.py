@@ -1,8 +1,10 @@
 from collections import OrderedDict
 
+from django.views import View
 from django.views.generic.base import TemplateView
+from django.http import HttpResponse, HttpResponseBadRequest
 
-from recipes.models import Mix
+from recipes.models import Mix, Order
 
 
 order_by = OrderedDict((
@@ -64,3 +66,34 @@ class Mixes(TemplateView):
         context['mixes'] = mixes_sorted
 
         return context
+
+
+class OrderView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            mix_id = request.POST['mix_id']
+            mix = Mix.objects.get(id=int(mix_id))
+            order = Order(mix=mix)
+            order.save()
+            if order.accepted:
+                mix.count += 1
+                mix.save()
+            return HttpResponse(status=204)
+        except (ValueError, KeyError, Mix.DoesNotExist):
+            return HttpResponseBadRequest()
+
+
+class MixView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            mix_id = int(request.POST['mix_id'])
+            like_value = 1 if 'true' in request.POST['like'] else -1
+            mix = Mix.objects.get(id=mix_id)
+            mix.likes += like_value
+            mix.save()
+            print(like_value, 'like for', mix)
+            return HttpResponse(status=204)
+        except (ValueError, KeyError, Mix.DoesNotExist):
+            print('Error in like post')
+            return HttpResponseBadRequest()
+

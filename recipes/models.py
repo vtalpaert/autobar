@@ -1,4 +1,5 @@
 import os
+from math import ceil
 
 from django.db import models
 import solo.models
@@ -115,17 +116,14 @@ class Mix(models.Model):
     def ordered_doses(self):
         return self.doses.order_by('number')
 
-    def serve(self):
-        for dose in self.ordered_doses():
-            dose.serve()
-
     @property
     def alcohol_percentage(self):
         q_and_p = self.doses.values_list('quantity', 'ingredient__alcohol_percentage')
         if len(q_and_p) == 0:
             return 0
         try:
-            return sum(map(lambda qp: qp[0] * qp[1], q_and_p))/sum(map(lambda qp: qp[0], q_and_p))
+            percentage = sum(map(lambda qp: qp[0] * qp[1], q_and_p))/sum(map(lambda qp: qp[0], q_and_p))
+            return ceil(10 * percentage) / 10
         except ZeroDivisionError:
             return 0
 

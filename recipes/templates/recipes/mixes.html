@@ -19,6 +19,7 @@
 {% block dashboard_active %}active{% endblock %}
 
 {% block content %}
+
 <nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sorts" aria-controls="sorts" aria-expanded="false" aria-label="Sorts">
     <span class="navbar-toggler-icon"></span>
@@ -91,7 +92,7 @@
                             </div>
                             <div class="modal-body">
                                 <p>Ingredients:
-                               <ul class="navbar-nav mr-auto">
+                                <ul class="navbar-nav mr-auto">
                                 {% for dose in mix.ordered_doses %}
                                       <li class="nav-item">
                                         {{ dose }}
@@ -101,8 +102,29 @@
                                 {% endfor %}
                                 </ul>
                                 </p>
-                               <p>{{ mix.description }}</p>
-                               <a href="#" class="btn btn-sm btn-primary">Mix me !</a>
+                                <p>{{ mix.description }}</p>
+                                {% if mix.alcohol_percentage %}
+                                <p>Degree of alcohol {{ mix.alcohol_percentage }}%</p>
+                                {% endif %}
+                                <form id="like-form{{ mix.id }}" class="btn-group" action="/mix/like/" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" value="{{ mix.id }}" name="mix_id">
+                                    <input id="like-value{{ mix.id }}" type="hidden" value="false" name="like">
+                                    <input id="toggle-event{{ mix.id }}" data-toggle="toggle" type="checkbox" data-height="40" data-width="70" data-onstyle="outline-dark" data-offstyle="outline-secondary" data-on="<img src='{{ MEDIA_URL }}icons/thumbs-up.svg' alt='Like'>" data-off="<img src='{{ MEDIA_URL }}icons/thumbs-up.svg' alt='Like'>">
+                                </form>
+                                <script>
+                                    $(function() {
+                                        $('#toggle-event{{ mix.id }}').change(function() {
+                                            document.getElementById("like-value{{ mix.id }}").value = $(this).prop('checked');
+                                            document.getElementById("like-form{{ mix.id }}").submit();
+                                        })
+                                    })
+                                </script>
+                                <form class="btn-group" action="/order/" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" value="{{ mix.id }}" name="mix_id">
+                                    <button type="submit" class="btn btn-sm btn-primary">Mix me !</button>
+                                </form>
                             </div>
                         </div>
                     </div>
