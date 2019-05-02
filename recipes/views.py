@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from django.views import View
 from django.views.generic.base import TemplateView
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse
 
 from recipes.models import Mix, Order
 
@@ -79,8 +79,23 @@ class OrderView(View):
                 mix.count += 1
                 mix.save()
             return HttpResponse(status=204)
-        except (ValueError, KeyError, Mix.DoesNotExist):
+        except (ValueError, KeyError):
             return HttpResponseBadRequest()
+        except Mix.DoesNotExist:
+            return HttpResponseServerError()
+
+    def get(self, request, *args, **kwargs):
+        try:
+            last_order = Order.objects.latest('created_at')
+            return JsonResponse(
+                {
+                    'accepted': last_order.accepted,
+                    'status': last_order.status,
+                    'mix_name': last_order.mix.name,
+                }
+            )
+        except Order.DoesNotExist:
+            return HttpResponseServerError()
 
 
 class MixView(View):
@@ -93,7 +108,9 @@ class MixView(View):
             mix.save()
             print(like_value, 'like for', mix)
             return HttpResponse(status=204)
-        except (ValueError, KeyError, Mix.DoesNotExist):
-            print('Error in like post')
+        except (ValueError, KeyError) as e:
+            print(e)
             return HttpResponseBadRequest()
+        except Mix.DoesNotExist:
+            return HttpResponseServerError()
 

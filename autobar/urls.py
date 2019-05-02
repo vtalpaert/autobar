@@ -21,7 +21,8 @@ from autobar import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('recipes.urls'))
+    path('', include('recipes.urls')),
+    path('', include('hardware.urls')),
 ]
 
 if settings.DEBUG:
