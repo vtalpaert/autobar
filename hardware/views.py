@@ -1,6 +1,7 @@
 from django.views import View
 from django.http import JsonResponse
 
+from autobar import settings
 from hardware.interfaces import HardwareInterface
 
 
@@ -10,5 +11,6 @@ class InterfaceView(View):
         return JsonResponse(
             {
                 'state': interface.state,
+                'state_verbose': settings.INTERFACE_STATES[interface.state],
             }
         )

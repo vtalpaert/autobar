@@ -4,6 +4,7 @@ from django.views import View
 from django.views.generic.base import TemplateView
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse
 
+from autobar import settings
 from recipes.models import Mix, Order
 
 
@@ -92,6 +93,7 @@ class OrderView(View):
                     'accepted': last_order.accepted,
                     'status': last_order.status,
                     'mix_name': last_order.mix.name,
+                    'status_verbose': settings.SERVING_STATES_CHOICES[last_order.status][1],
                 }
             )
         except Order.DoesNotExist:
