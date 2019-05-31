@@ -76,7 +76,9 @@
       <div class="row">
         <div class="col-md-4">
           <div class="card mb-4 shadow-sm">
+            {% if mix.image %}
             <img class="card-img-top" src="{{ MEDIA_URL }}{{ mix.image }}" alt="Card image cap">
+            {% endif %}
             <div class="card-body">
               <h2>{{ mix }}</h2>
               <p class="card-text">{{ mix.description }}</p>
