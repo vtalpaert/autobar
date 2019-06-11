@@ -3,11 +3,15 @@ from collections import OrderedDict
 from django.views import View
 from django.views.generic.base import TemplateView
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse
+from django.utils.log import logging
 
 from bootstrap_modal_forms.generic import BSModalReadView
 
 from autobar import settings
 from recipes.models import Mix, Order
+
+
+logger = logging.getLogger('autobar')
 
 
 order_by = OrderedDict((
@@ -74,7 +78,6 @@ class Mixes(TemplateView):
 class OrderView(View):
     def post(self, request, mix_id, *args, **kwargs):
         try:
-            #mix_id = request.POST['mix_id']
             mix = Mix.objects.get(id=int(mix_id))
             order = Order(mix=mix)
             order.save()
@@ -102,14 +105,14 @@ class OrderView(View):
             return HttpResponseServerError()
 
 
-class MixView(View):
+class MixLikeView(View):
     def post(self, request, mix_id, *args, **kwargs):
         try:
             like_value = 1 if 'true' in request.POST['like'] else -1
             mix = Mix.objects.get(id=mix_id)
             mix.likes += like_value
             mix.save()
-            print(like_value, 'like for', mix)
+            logger.info('%i like for %s' % (like_value, mix))
             return HttpResponse(status=204)
         except (ValueError, KeyError) as e:
             print(e)
@@ -121,6 +124,3 @@ class MixView(View):
 class MixModalView(BSModalReadView):
     model = Mix
     template_name = 'recipes/modal_mix.html'
-
-    class Media:
-        js = ('js/modal_mix.js',)

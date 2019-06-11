@@ -5,7 +5,7 @@ from recipes import views
 
 urlpatterns = [
     path('mix-info/<int:pk>', views.MixModalView.as_view(), name='modal_mix'),
-    path('mix/like/<int:mix_id>', views.MixView.as_view(), name='like'),
+    path('mix/like/<int:mix_id>', views.MixLikeView.as_view(), name='like'),
     path('order/<int:mix_id>', views.OrderView.as_view(), name='post_order'),
     path('mixes/<slug:sort_by>/<slug:subsort_by>/', views.Mixes.as_view(), name='mixes_ss'),
     path('mixes/<slug:sort_by>/', views.Mixes.as_view(), name='mixes_s'),
