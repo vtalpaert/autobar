@@ -38,6 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'solo',
+    'bootstrap',
+    'widget_tweaks',
+    'bootstrap_modal_forms',
     'recipes',
     'hardware.apps.HardwareConfig',
 ]

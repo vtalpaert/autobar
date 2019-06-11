@@ -1,0 +1,83 @@
+{% load widget_tweaks %}
+
+<div class="modal-header">
+  <h3 class="modal-title">{{ mix }}</h3>
+  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+
+<div class="modal-body">
+
+    <p>Ingredients:
+    <ul class="navbar-nav mr-auto">
+    {% for dose in mix.ordered_doses %}
+            <li class="nav-item">
+            {{ dose }}
+            </li>
+    {% empty %}
+            <li>No ingredients.</li>
+    {% endfor %}
+    </ul>
+    </p>
+    <p>{{ mix.description }}</p>
+    {% if mix.alcohol_percentage %}
+    <p>Degree of alcohol {{ mix.alcohol_percentage }}%</p>
+    {% endif %}
+
+</div>
+
+<div class="modal-footer">
+  {% include "_svg_as_img.html" %}
+
+  <button type="button" onclick="like_onclick();" class="btn btn-light" id="like-btn">
+      <img id="like-svg" class="svg social-link" src="{{ MEDIA_URL }}icons/thumbs-up.svg"/>
+  </button>
+
+  <button class="btn btn-primary btn-block" id="submitme">Mix me !</button>
+  <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+
+  <script type = "text/javascript">
+
+    var liked = false;
+    function like_onclick()
+    {
+      if (liked) {
+        liked = false;
+        $("#like-svg")[0].style.fill = "";
+      } else {
+        liked = true;
+        $("#like-svg")[0].style.fill = "dodgerblue";
+      }
+      $.ajax({
+          type: 'POST',
+          url:"{% url 'like' mix.id %}",
+          data: {
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+            like: liked
+          },
+          error: function(error) {
+            $("#modal").html(error.responseText)
+          }
+      });
+    }
+
+    $("#submitme").on('click', function(e){
+      e.preventDefault();
+      $.ajax({
+          type: 'POST',
+          url:"{% url 'post_order' mix.id %}",
+          data: {
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+          },
+          success: function(){
+              $("#submitme").prop('disabled', true);
+          },
+          error: function(error) {
+            $("#modal").html(error.responseText)
+          }
+      });
+    });
+  </script>
+
+</div>

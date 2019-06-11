@@ -4,6 +4,8 @@ from django.views import View
 from django.views.generic.base import TemplateView
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse
 
+from bootstrap_modal_forms.generic import BSModalReadView
+
 from autobar import settings
 from recipes.models import Mix, Order
 
@@ -70,9 +72,9 @@ class Mixes(TemplateView):
 
 
 class OrderView(View):
-    def post(self, request, *args, **kwargs):
+    def post(self, request, mix_id, *args, **kwargs):
         try:
-            mix_id = request.POST['mix_id']
+            #mix_id = request.POST['mix_id']
             mix = Mix.objects.get(id=int(mix_id))
             order = Order(mix=mix)
             order.save()
@@ -101,9 +103,8 @@ class OrderView(View):
 
 
 class MixView(View):
-    def post(self, request, *args, **kwargs):
+    def post(self, request, mix_id, *args, **kwargs):
         try:
-            mix_id = int(request.POST['mix_id'])
             like_value = 1 if 'true' in request.POST['like'] else -1
             mix = Mix.objects.get(id=mix_id)
             mix.likes += like_value
@@ -116,3 +117,10 @@ class MixView(View):
         except Mix.DoesNotExist:
             return HttpResponseServerError()
 
+
+class MixModalView(BSModalReadView):
+    model = Mix
+    template_name = 'recipes/modal_mix.html'
+
+    class Media:
+        js = ('js/modal_mix.js',)

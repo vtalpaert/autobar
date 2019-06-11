@@ -19,6 +19,7 @@
 {% block dashboard_active %}active{% endblock %}
 
 {% block content %}
+{% include "_modal.html" %}
 
 <nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sorts" aria-controls="sorts" aria-expanded="false" aria-label="Sorts">
@@ -83,61 +84,8 @@
               <h2>{{ mix }}</h2>
               <p class="card-text">{{ mix.description }}</p>
               <div class="d-flex justify-content-between align-items-center">
-                   <!-- Modal HTML -->
-                  <a href="#view{{ mix.id }}" class="btn btn-sm btn-outline-secondary" data-toggle="modal">View</a>
-                  <div id="view{{ mix.id }}" class="modal fade">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h4 class="modal-title">{{ mix }}</h4>
-                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                            </div>
-                            <div class="modal-body">
-                                <p>Ingredients:
-                                <ul class="navbar-nav mr-auto">
-                                {% for dose in mix.ordered_doses %}
-                                      <li class="nav-item">
-                                        {{ dose }}
-                                      </li>
-                                {% empty %}
-                                      <li>No ingredients.</li>
-                                {% endfor %}
-                                </ul>
-                                </p>
-                                <p>{{ mix.description }}</p>
-                                {% if mix.alcohol_percentage %}
-                                <p>Degree of alcohol {{ mix.alcohol_percentage }}%</p>
-                                {% endif %}
-                                <form id="like-form{{ mix.id }}" class="btn-group" action="/mix/like/" method="post">
-                                    {% csrf_token %}
-                                    <input type="hidden" value="{{ mix.id }}" name="mix_id">
-                                    <input id="like-value{{ mix.id }}" type="hidden" value="false" name="like">
-                                    <input id="toggle-event{{ mix.id }}" data-toggle="toggle" type="checkbox" data-height="40" data-width="70" data-onstyle="outline-dark" data-offstyle="outline-secondary" data-on="<img src='{{ MEDIA_URL }}icons/thumbs-up.svg' alt='Like'>" data-off="<img src='{{ MEDIA_URL }}icons/thumbs-up.svg' alt='Like'>">
-                                </form>
-                                <script>
-                                    $(function() {
-                                        $('#toggle-event{{ mix.id }}').change(function() {
-                                            document.getElementById("like-value{{ mix.id }}").value = $(this).prop('checked');
-                                            document.getElementById("like-form{{ mix.id }}").submit();
-                                        })
-                                    })
-                                </script>
-                                <form class="btn-group" action="/order/" method="post">
-                                    {% csrf_token %}
-                                    <input type="hidden" value="{{ mix.id }}" name="mix_id">
-                                    <button type="submit" class="btn btn-sm btn-primary">Mix me !</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                  </div>
-
-                {% comment %}<div class="btn-group">
-                  <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
-
-                  <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
-
-                </div>{% endcomment %}
+                <!-- Modal HTML -->
+                <button type="button" class="modal-mix btn btn-sm btn-outline-secondary" data-id="{% url 'modal_mix' mix.pk %}">View</button>
                 <small class="text-muted">{{ mix.likes }} likes, served {{ mix.count }} times.</small>
               </div>
             </div>
@@ -152,5 +100,28 @@
 
 </main>
 
-
 {% endblock %}
+
+{% block extrascripts %}
+  <script type="text/javascript">
+    $(function () {
+      $(".modal-mix").each(function () {
+        $(this).modalForm({formURL: $(this).data('id')});
+      });
+
+      /*$('#modal').on('shown.bs.modal', function (e) {
+        alert("I want this to appear after the modal has opened!");
+      });*/
+
+      $("#submitme").on('click', function(e){
+        alert('clicked');
+        e.preventDefault();
+      });
+
+      function send_order() {
+        alert('send order');
+      }
+
+    });
+  </script>
+{% endblock extrascripts %}

@@ -1,6 +1,9 @@
 # project deps
 django>=2.1.5
 django-solo
+django-bootstrap-static
+django-widget-tweaks
+django-bootstrap-modal-forms
 
 # recipes app deps
 Pillow
