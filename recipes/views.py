@@ -4,11 +4,14 @@ from django.views import View
 from django.views.generic.base import TemplateView
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse
 from django.utils.log import logging
+from django.shortcuts import get_object_or_404
+from django.http import Http404
 
-from bootstrap_modal_forms.generic import BSModalReadView
+from bootstrap_modal_forms.generic import BSModalReadView, BSModalCreateView
 
 from autobar import settings
-from recipes.models import Mix, Order
+from .models import Mix, Order
+from .forms import CreateOrderForm
 
 
 logger = logging.getLogger('autobar')
@@ -75,35 +78,58 @@ class Mixes(TemplateView):
         return context
 
 
-class OrderView(View):
+class OrderModalView(BSModalCreateView):
+    template_name = 'recipes/modal_order.html'
+    form_class = CreateOrderForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['mix'] = self.get_mix()
+        return context
+
+    def get_mix(self):
+        try:
+            return self.mix
+        except AttributeError:
+            mix_id = get_or_none(self.kwargs, 'mix_id')
+            if not mix_id:
+                raise Http404('You should provide a Mix id in your url')
+            self.mix = get_object_or_404(Mix, id=mix_id)
+            return self.mix
+
+    def get_initial(self):
+        return {'mix': self.get_mix(), 'status': 1}
+
+
+class CreateOrderView(View):
     def post(self, request, mix_id, *args, **kwargs):
-        try:
-            mix = Mix.objects.get(id=int(mix_id))
-            order = Order(mix=mix)
-            order.save()
-            if order.accepted:
-                mix.count += 1
-                mix.save()
-            return HttpResponse(status=204)
-        except (ValueError, KeyError):
-            return HttpResponseBadRequest()
-        except Mix.DoesNotExist:
-            return HttpResponseServerError()
+        mix = get_object_or_404(Mix, id=mix_id)
+        order = Order(mix=mix)
+        order.save()
+        if order.accepted:
+            mix.count += 1
+            mix.save()
+        return JsonResponse(
+            {
+                'order_id': order.pk,
+                'accepted': order.accepted,
+                'status': order.status,
+                'mix_name': order.mix.name,
+                'status_verbose': order.status_verbose(),
+            }
+        )
 
-    def get(self, request, *args, **kwargs):
-        try:
-            last_order = Order.objects.latest('created_at')
-            return JsonResponse(
-                {
-                    'accepted': last_order.accepted,
-                    'status': last_order.status,
-                    'mix_name': last_order.mix.name,
-                    'status_verbose': settings.SERVING_STATES_CHOICES[last_order.status][1],
-                }
-            )
-        except Order.DoesNotExist:
-            return HttpResponseServerError()
-
+class CheckOrderView(View):
+    def get(self, request, order_id, *args, **kwargs):
+        order = get_object_or_404(Order, id=order_id)
+        return JsonResponse(
+            {
+                'accepted': order.accepted,
+                'status': order.status,
+                'mix_name': order.mix.name,
+                'status_verbose': order.status_verbose(),
+            }
+        )
 
 class MixLikeView(View):
     def post(self, request, mix_id, *args, **kwargs):

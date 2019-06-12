@@ -253,6 +253,9 @@ class Order(models.Model):
         else:
             return 'Empty order'
 
+    def status_verbose(self):
+        return settings.SERVING_STATES_CHOICES[self.status][1]
+
 
 class Configuration(solo.models.SingletonModel):
     updated_at = models.DateTimeField(auto_now=True)

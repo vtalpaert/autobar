@@ -5,8 +5,10 @@ from recipes import views
 
 urlpatterns = [
     path('mix-info/<int:pk>', views.MixModalView.as_view(), name='modal_mix'),
+    path('order/form/<int:mix_id>', views.OrderModalView.as_view(), name='order_form'),
+    path('order/create/<int:mix_id>', views.CreateOrderView.as_view(), name='create_order'),
+    path('order/check/<int:order_id>', views.CheckOrderView.as_view(), name='check_order'),
     path('mix/like/<int:mix_id>', views.MixLikeView.as_view(), name='like'),
-    path('order/<int:mix_id>', views.OrderView.as_view(), name='post_order'),
     path('mixes/<slug:sort_by>/<slug:subsort_by>/', views.Mixes.as_view(), name='mixes_ss'),
     path('mixes/<slug:sort_by>/', views.Mixes.as_view(), name='mixes_s'),
     path('mixes/', views.Mixes.as_view(), name='mixes'),

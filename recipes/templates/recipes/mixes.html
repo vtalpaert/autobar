@@ -22,6 +22,7 @@
 {% include "_modal.html" %}
 
 <nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
+  <a class="navbar-brand">Sort by :</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sorts" aria-controls="sorts" aria-expanded="false" aria-label="Sorts">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -41,6 +42,7 @@
 </nav>
 
 <nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
+  <a class="navbar-brand">Sort {{ sort_by }} by :</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#subsorts" aria-controls="subsorts" aria-expanded="false" aria-label="Subsorts">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -59,18 +61,12 @@
 
 
 <main role="main">
-{% comment %}
   <section class="jumbotron text-center">
     <div class="container">
-      <h1 class="jumbotron-heading">Album example</h1>
-      <p class="lead text-muted">Something short and leading about the collection below—its contents, the creator, etc. Make it short and sweet, but not too short so folks don't simply skip over it entirely.</p>
-      <p>
-        <a href="#" class="btn btn-primary my-2">Main call to action</a>
-        <a href="#" class="btn btn-secondary my-2">Secondary action</a>
-      </p>
+      <h1 class="jumbotron-heading">Fancy a drink ?</h1>
+      <p class="lead text-muted">Choose how to filter above between Popularity, Recently added... Click View to see the cocktail details and order one from the robot.</p>
     </div>
   </section>
-{% endcomment %}
   <div class="album py-5 bg-light">
     <div class="container">
       {% for mix in mixes %}
@@ -86,6 +82,9 @@
               <div class="d-flex justify-content-between align-items-center">
                 <!-- Modal HTML -->
                 <button type="button" class="modal-mix btn btn-sm btn-outline-secondary" data-id="{% url 'modal_mix' mix.pk %}">View</button>
+                {% comment %}
+                <button type="button" class="modal-order btn btn-sm btn-outline-secondary" data-id="{% url 'order_form' mix.pk %}">Order</button>
+                {% endcomment %}
                 <small class="text-muted">{{ mix.likes }} likes, served {{ mix.count }} times.</small>
               </div>
             </div>
@@ -108,6 +107,9 @@
       $(".modal-mix").each(function () {
         $(this).modalForm({formURL: $(this).data('id')});
       });
+      //$(".modal-order").each(function () {
+      //  $(this).modalForm({formURL: $(this).data('id')});
+      //});
     });
   </script>
 {% endblock extrascripts %}

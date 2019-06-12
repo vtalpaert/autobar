@@ -262,9 +262,9 @@ UNIT_MASS_TO_VOLUME = UNIT_DENSITY_DEFAULT / UNIT_CONVERSION_VOLUME_SI  # 1 cL i
 
 # hardware states
 INTERFACE_STATES = {
-    0: 'Free',
-    1: 'Manual',
-    2: 'Controlled',
+    0: 'Ready to serve',
+    1: 'Manual control',
+    2: 'Mixing',
 }
 
 SERVING_STATES_CHOICES = (

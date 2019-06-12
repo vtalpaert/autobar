@@ -1,7 +1,7 @@
 {% load widget_tweaks %}
 
-<div class="modal-header">
-  <h3 class="modal-title mx-auto">{{ mix }}</h3>
+<div class="modal-header bg-dark">
+  <h3 class="modal-title mx-auto text-white">{{ mix }}</h3>
   {% comment %}
   <button type="button" class="close" data-dismiss="modal" aria-label="Close">
     <span aria-hidden="true">&times;</span>
@@ -10,29 +10,28 @@
 </div>
 
 <div class="modal-body">
-    <p>Ingredients:
-    <ul class="navbar-nav mr-auto">
-    {% for dose in mix.ordered_doses %}
-            <li class="nav-item">
-            {{ dose }}
-            </li>
-    {% empty %}
-            <li>No ingredients.</li>
-    {% endfor %}
-    </ul>
-    </p>
-    <p>{{ mix.description }}</p>
-    {% if mix.alcohol_percentage %}
-    <p>Degree of alcohol {{ mix.alcohol_percentage }}%</p>
-    {% endif %}
-
-    <small class="text-muted">{{ mix.likes }} likes, served {{ mix.count }} times.</small>
-
+  <button id="interface-state" type="button" class="btn btn-secondary btn-block" disabled>State</button>
+  <p></p>
+  <p>Ingredients:
+  <ul class="navbar-nav mr-auto">
+  {% for dose in mix.ordered_doses %}
+          <li class="nav-item">
+          {{ dose }}
+          </li>
+  {% empty %}
+          <li>No ingredients.</li>
+  {% endfor %}
+  </ul>
+  </p>
+  <p>{{ mix.description }}</p>
+  {% if mix.alcohol_percentage %}
+  <p>Degree of alcohol {{ mix.alcohol_percentage }}%</p>
+  {% endif %}
+  <small class="text-muted">{{ mix.likes }} likes, served {{ mix.count }} times.</small>
 </div>
 
 <div class="modal-footer">
   {% include "_svg_as_img.html" %}
-
   <button type="button" onclick="like_onclick();" class="btn btn-light" id="like-btn">
       <img id="like-svg" class="svg social-link" src="{{ MEDIA_URL }}icons/thumbs-up.svg"/>
   </button>
@@ -45,7 +44,6 @@
   <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 
   <script type = "text/javascript">
-
     var liked = false;
     function like_onclick()
     {
@@ -64,7 +62,7 @@
             like: liked
           },
           error: function(error) {
-            $("#modal").html(error.responseText)
+            $("#modal").html(error.responseText);
           }
       });
     }
@@ -73,18 +71,68 @@
       e.preventDefault();
       $.ajax({
           type: 'POST',
-          url:"{% url 'post_order' mix.id %}",
+          url:"{% url 'create_order' mix.id %}",
           data: {
             csrfmiddlewaretoken: '{{ csrf_token }}',
           },
-          success: function(){
-              $("#submitme").prop('disabled', true);
+          success: function(response){
+            console.log(response);
+            order_state(response);
+            $("#submitme").prop('disabled', true);
           },
           error: function(error) {
-            $("#modal").html(error.responseText)
+            $("#modal").html(error.responseText);
           }
       });
     });
+
+    function set_state(text) {
+      $("#interface-state").html(text);
+    }
+    function interface_color(prev, next) {
+      $("#interface-state").removeClass(prev);
+      $("#interface-state").addClass(next);
+    }
+
+    function interface_state() {
+      $.ajax({
+          type: 'GET',
+          url:"{% url 'hardware_interface' %}",
+          success: function(response){
+            console.log(response);
+            set_state(response['state_verbose']);
+          },
+          error: function(error) {
+            $("#modal").html(error.responseText);
+          }
+      });
+    }
+    interface_state();
+
+    function order_state(response) {
+      if (response['accepted']) {
+        set_state(response['status_verbose']);
+        if (response['status_verbose'] == 'Done') {
+          interface_color("btn-secondary", "btn-success");
+        }
+      } else {
+        set_state('Order was refused');
+        interface_color("btn-secondary", "btn-danger");
+      }
+    }
+    function check_order(order_id) {
+      $.ajax({
+          type: 'GET',
+          url:"order/check/" + order_id,
+          success: function(response){
+            console.log(response);
+            order_state(response);
+          },
+          error: function(error) {
+            $("#modal").html(error.responseText);
+          }
+      });
+    }
   </script>
 
 </div>
