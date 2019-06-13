@@ -19,10 +19,16 @@
 {% block dashboard_active %}active{% endblock %}
 
 {% block content %}
-{% include "_modal.html" %}
+<div class="modal fade" tabindex="-1" role="dialog" id="modal">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content"></div>
+  </div>
+</div>
 
-<nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
-  <a class="navbar-brand">Sort by :</a>
+<nav class="navbar navbar-expand-sm navbar-sticky-top navbar-light border-bottom border-dark" style="background-color: #BED0F4;">
+  <span class="navbar-text">
+      Sort by :
+  </span>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sorts" aria-controls="sorts" aria-expanded="false" aria-label="Sorts">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -41,8 +47,10 @@
   </div>
 </nav>
 
-<nav class="navbar navbar-expand-md navbar-sticky-top bg-light border-bottom border-dark">
-  <a class="navbar-brand">Sort {{ sort_by }} by :</a>
+<nav class="navbar navbar-expand-sm navbar-sticky-top navbar-light border-bottom border-dark" style="background-color: #e3f2fd;">
+  <span class="navbar-text">
+      Sort {{ sort_by }} by :
+  </span>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#subsorts" aria-controls="subsorts" aria-expanded="false" aria-label="Subsorts">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -102,6 +110,7 @@
 {% endblock %}
 
 {% block extrascripts %}
+  <script src="{% static 'js/report_interface_state.js' %}"></script>
   <script type="text/javascript">
     $(function () {
       $(".modal-mix").each(function () {
