@@ -273,3 +273,4 @@ SERVING_STATES_CHOICES = (
     (2, 'Serving'),
     (3, 'Done'),
 )
+DONE_SERVING_VALUE = SERVING_STATES_CHOICES[-1][0]

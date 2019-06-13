@@ -116,6 +116,7 @@ class CreateOrderView(View):
                 'status': order.status,
                 'mix_name': order.mix.name,
                 'status_verbose': order.status_verbose(),
+                'done': order.status == settings.DONE_SERVING_VALUE,
             }
         )
 
@@ -128,6 +129,7 @@ class CheckOrderView(View):
                 'status': order.status,
                 'mix_name': order.mix.name,
                 'status_verbose': order.status_verbose(),
+                'done': order.status == settings.DONE_SERVING_VALUE,
             }
         )
 

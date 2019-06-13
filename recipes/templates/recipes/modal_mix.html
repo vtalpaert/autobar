@@ -79,7 +79,8 @@
           },
           success: function(response){
             console.log(response);
-            order_state(response);
+            display_order_state(response);
+            var order_id = response['order_id'];
             $("#submitme").prop('disabled', true);
           },
           error: function(error) {
@@ -88,7 +89,7 @@
       });
     });
 
-    interface_state(); // from report_interface_state.js
+    show_interface_state(); // from report_interface_state.js
   </script>
 
 </div>
