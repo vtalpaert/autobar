@@ -272,5 +272,6 @@ SERVING_STATES_CHOICES = (
     (1, 'Waiting for glass'),
     (2, 'Serving'),
     (3, 'Done'),
+    (4, 'Abandon'),
 )
-DONE_SERVING_VALUE = SERVING_STATES_CHOICES[-1][0]
+DONE_SERVING_VALUE = SERVING_STATES_CHOICES[3][0]

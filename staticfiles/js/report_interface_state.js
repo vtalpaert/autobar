@@ -1,3 +1,7 @@
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function set_state_html(text) {
     $("#interface-state").html(text);
 }
@@ -12,7 +16,6 @@ function show_interface_state() {
         type: 'GET',
         url:"/hardware/interface",
         success: function(response){
-            console.log(response);
             set_state_html(response['state_verbose']);
         },
         error: function(error) {
@@ -33,13 +36,17 @@ function display_order_state(response) {
     }
 }
 
-function check_order(order_id) {
+function continuous_check_order(order_id, max_try) {
     $.ajax({
         type: 'GET',
         url:"/order/check/" + order_id,
-        success: function(response){
+        success: async function(response){
             console.log(response);
             display_order_state(response);
+            if (!response['done'] && max_try > 0) {
+                await sleep(100);
+                continuous_check_order(order_id, max_try - 1);
+            }
         },
         error: function(error) {
             $("#modal").html(error.responseText);

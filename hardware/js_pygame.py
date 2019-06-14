@@ -44,6 +44,7 @@ class Joystick(BackgroundThread):
 
     def quit(self):
         pygame.quit()
+        self.stop()
 
 
 class TestInterface(object):

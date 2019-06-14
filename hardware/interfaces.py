@@ -21,6 +21,7 @@ except RuntimeError:
             return self.weight
 
 from hardware.js_pygame import Joystick
+from hardware import process_order
 
 logger = logging.getLogger('autobar')
 
@@ -163,23 +164,6 @@ class HardwareInterface(Singleton):
             time.sleep(wait_secs)
         return True
 
-    def _wait_for_glass(self):
-        glass_detected = self.cell_wait_for_weight_total(
-            settings.WEIGHT_CELL_GLASS_DETECTION_VALUE,
-            timeout=settings.WEIGHT_CELL_GLASS_DETECTION_TIMEOUT,
-            wait_secs=0.01
-        )
-        time.sleep(settings.DELAY_BEFORE_SERVING)
-        return glass_detected
-
-    def _wait_for_glass_removed(self, glass_weight):
-        self.cell_wait_for_weight_total(
-            glass_weight + settings.WEIGHT_CELL_MINIMUM_DETECTION,
-            timeout=1,
-            wait_secs=1,
-            reversed_condition=True,
-        )
-
     def order_post_save(self, sender, instance, created, raw, using, update_fields, **kwargs):
         order = instance
 
@@ -200,76 +184,9 @@ class HardwareInterface(Singleton):
         if order.accepted and self._last_order == order and self.state == 2:
             # current accepted order is processed here
             if order.status == 1:
-                # will move status to 'Serving'
-                glass_detected = self._wait_for_glass()
-                glass_detected_weight = self.cell_weight()
-                if not glass_detected and not settings.ALLOW_NO_GLASS_DETECTION:
-                    # refused
-                    logger.debug('Glass not detected (only %s)' % str(glass_detected_weight))
-                    order.accepted, self._last_order = False, None
-                    self.state = 0  # abandon this order
-                    return order.save()
-                else:
-                    # status goes to 'Serving' here
-                    order.status = 2  # serving
-                    logger.debug('Glass detected (weight %s)' % str(glass_detected_weight))
-                    return order.save()
+                p = process_order.WaitForGlass(self, order)
+                p.start()
 
             elif order.status == 2:
-                # will move status to 'Done'
-                doses = order.mix.ordered_doses() if order.mix else []
-                logger.debug(str(doses))
-                glass_weight = self.cell_weight()
-
-                for dose in doses:
-                    dispensers_query = dose.ingredient.dispensers(ignore_empty=False)
-                    if not dispensers_query.exists():
-                        # refuse order
-                        logger.error('No available dispenser providing %s. Stopping cocktail' % dose.ingredient)
-                        order.accepted, self._last_order = False, None
-                        self.state = 0
-                        return order.save()
-                    dispenser, weight = dispensers_query[0], dose.quantity
-                    current_weight = self.cell_weight()
-                    if weight < settings.WEIGHT_CELL_MINIMUM_DETECTION:
-                        logger.debug(
-                            '%s is under WEIGHT_CELL_MINIMUM_DETECTION (%s)'
-                            % (dose, settings.WEIGHT_CELL_MINIMUM_DETECTION)
-                        )
-                        continue  # next dose
-                    try:
-                        self.demux_start(dispenser.number)
-                        quantity_is_reached = self.cell_wait_for_weight_total(
-                            weight + current_weight,
-                            timeout=settings.WEIGHT_CELL_SERVING_TIMEOUT,
-                            wait_secs=0,
-                        )
-                    finally:
-                        self.demux_stop(dispenser.number)
-                    if not quantity_is_reached:
-                        logger.info(
-                            'Pump %i is not serving within %s seconds'
-                            % (dispenser.number, str(settings.WEIGHT_CELL_SERVING_TIMEOUT))
-                        )
-                        if self.cell_weight() < current_weight + 2 * settings.WEIGHT_CELL_MINIMUM_DETECTION:
-                            # seems like the dispenser is empty
-                            if not settings.IGNORE_EMPTY_DISPENSER:
-                                logger.info('Marked %s as empty' % dispenser)
-                                dispenser.is_empty = True
-                                dispenser.save()
-
-                        # wait for glass removed
-                        self._wait_for_glass_removed(glass_weight)
-
-                        # abandon
-                        order.accepted = False
-                        self.state = 0
-                        self._last_order = None
-                        return order.save()
-                    time.sleep(settings.DELAY_BETWEEN_SERVINGS)
-                self.demux_stop()
-                logger.info('Served one %s.' % order.mix)
-                order.status, self._last_order = 3, None  # done
-                self._wait_for_glass_removed(glass_weight)
-                self.state = 0  # release state lock
-                return order.save()
+                p = process_order.Serve(self, order)
+                p.start()

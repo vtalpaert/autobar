@@ -78,10 +78,9 @@
             csrfmiddlewaretoken: '{{ csrf_token }}',
           },
           success: function(response){
-            console.log(response);
             display_order_state(response);
-            var order_id = response['order_id'];
             $("#submitme").prop('disabled', true);
+            continuous_check_order(response['order_id'], 1000);
           },
           error: function(error) {
             $("#modal").html(error.responseText);
