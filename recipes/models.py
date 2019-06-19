@@ -31,9 +31,6 @@ class Ingredient(models.Model):
         default=False,
     )
 
-    class Meta:
-        ordering = ('name',)
-
     def save(self, *args, **kwargs):
         self.alcohol_percentage = _cut(self.alcohol_percentage, low=0, high=100)
         self.density = _cut(self.density, low=0)
@@ -52,15 +49,24 @@ class Ingredient(models.Model):
         return self.added_separately or self.dispensers(ignore_empty).exists()
 
     @staticmethod
-    def available_ingredients(ignore_empty=DEFAULT_IGNORE_EMPTY, include_added_separately=True):
-        dispensers = Dispenser.objects.all()
-        if not ignore_empty:
-            dispensers = dispensers.filter(is_empty=False)
-        ingredients_in_dispensers = dispensers.values_list('ingredient', flat=True)
+    def available_ingredients(ingredients_in_dispensers=None, ignore_empty=DEFAULT_IGNORE_EMPTY, include_added_separately=False):
+        if ingredients_in_dispensers is None:
+            ingredients_in_dispensers = Dispenser.ingredients_in_dispensers(ignore_empty)
+        ingredients = Ingredient.objects.filter(pk__in=ingredients_in_dispensers)
         if include_added_separately:
-            return ingredients_in_dispensers.union(Ingredient.objects.filter(added_separately=True))
+            return ingredients.union(Ingredient.objects.filter(added_separately=True))
         else:
-            return ingredients_in_dispensers
+            return ingredients
+
+    @staticmethod
+    def alcohols():
+        return Ingredient.objects.exclude(alcohol_percentage=0)
+
+    @staticmethod
+    def available_alcohols(ingredients_in_dispensers=None, ignore_empty=DEFAULT_IGNORE_EMPTY):
+        if ingredients_in_dispensers is None:
+            ingredients_in_dispensers = Dispenser.ingredients_in_dispensers(ignore_empty)
+        return Ingredient.alcohols().filter(id__in=ingredients_in_dispensers)
 
 
 def mix_upload_to(instance, filename):
@@ -116,6 +122,9 @@ class Mix(models.Model):
     def ordered_doses(self):
         return self.doses.order_by('number')
 
+    def real_ingredients(self):
+        return self.ingredients.filter(added_separately=False)
+
     @property
     def alcohol_percentage(self):
         q_and_p = self.doses.values_list('quantity', 'ingredient__alcohol_percentage')
@@ -148,22 +157,18 @@ class Mix(models.Model):
 
     @staticmethod
     def filter_by_available(mixes=None, ignore_empty=DEFAULT_IGNORE_EMPTY):
-        available_ingredients_in_dispenser = list(Ingredient.available_ingredients(
+        available_ingredients_in_dispenser = Ingredient.available_ingredients(
             ignore_empty=ignore_empty,
             include_added_separately=False
-        ))
+        )
         mixes = mixes if mixes is not None else Mix.objects.all()
         mixes_with_at_least_one_ingredient = mixes.filter(
             ingredients__in=available_ingredients_in_dispenser
-        )
-        print(len(mixes_with_at_least_one_ingredient))
-        at_least_one, naive = Mix.naive_available(mixes_with_at_least_one_ingredient, ignore_empty), Mix.naive_available(ignore_empty=ignore_empty)
-        print(set(at_least_one) - set(naive), len(at_least_one), at_least_one)
-        print(set(naive) - set(at_least_one) , len(naive), naive)
+        ).distinct()
         return filter(
             lambda mix: all(
-                ingredient.added_separately or ingredient in available_ingredients_in_dispenser
-                for ingredient in mix.ingredients.all()
+                ingredient in available_ingredients_in_dispenser
+                for ingredient in mix.real_ingredients()
             ),
             mixes_with_at_least_one_ingredient
         )
@@ -233,6 +238,13 @@ class Dispenser(models.Model):
         if not self.ingredient:
             self.is_empty = True
         super(Dispenser, self).save(*args, **kwargs)
+
+    @staticmethod
+    def ingredients_in_dispensers(ignore_empty):
+        dispensers = Dispenser.objects.all()
+        if not ignore_empty:
+            dispensers = dispensers.filter(is_empty=False)
+        return dispensers.values_list('ingredient', flat=True)
 
 
 class Order(models.Model):

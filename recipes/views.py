@@ -51,7 +51,7 @@ class Mixes(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        mixes = Mix.objects.filter(verified=True)  # TODO filter for availables
+        mixes = Mix.objects.filter(verified=True)
 
         sort_by = get_or_none(kwargs, 'sort_by')
         sorts = list(order_by.keys()) + list(filters.keys())
@@ -68,6 +68,8 @@ class Mixes(TemplateView):
             if subsort_by not in subsorts:
                 subsort_by = subsorts[0]
             mixes_sorted = mixes.filter(**filters[sort_by][subsort_by])
+
+        mixes_sorted = Mix.filter_by_available(mixes=mixes_sorted)
 
         context['sorts'] = sorts
         context['sort_by'] = sort_by
