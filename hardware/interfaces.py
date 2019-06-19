@@ -4,7 +4,7 @@ import time
 
 from django.utils.log import logging
 
-from autobar import settings
+from django.conf import settings
 from hardware.singletonmixin import Singleton
 from hardware.demultiplexer import DeMultiplexer
 try:

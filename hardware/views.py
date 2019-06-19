@@ -1,7 +1,7 @@
 from django.views import View
 from django.http import JsonResponse
 
-from autobar import settings
+from django.conf import settings
 from hardware.interfaces import HardwareInterface
 
 

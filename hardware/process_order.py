@@ -3,7 +3,7 @@ import time
 
 from django.utils.log import logging
 
-from autobar import settings
+from django.conf import settings
 from hardware.background_threads import BackgroundThread
 
 logger = logging.getLogger('autobar')
@@ -92,7 +92,7 @@ class Serve(AdvanceOrder):
                 )
                 if self.interface.cell_weight() < current_weight + 2 * settings.WEIGHT_CELL_MINIMUM_DETECTION:
                     # seems like the dispenser is empty
-                    if not settings.IGNORE_EMPTY_DISPENSER:
+                    if settings.MARK_NOT_SERVING_DISPENSERS_AS_EMPTY:
                         logger.info('Marked %s as empty' % dispenser)
                         dispenser.is_empty = True
                         dispenser.save()

@@ -2,7 +2,7 @@ from django.contrib import admin
 from solo.admin import SingletonModelAdmin
 
 from recipes.models import *
-from autobar import settings
+from django.conf import settings
 
 
 def mark_as_separate(modeladmin, request, queryset):

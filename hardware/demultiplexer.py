@@ -1,6 +1,6 @@
 import os
 
-from autobar import settings
+from django.conf import settings
 if settings.INTERFACE_USE_DUMMY:
     os.environ['GPIOZERO_PIN_FACTORY'] = os.environ.get('GPIOZERO_PIN_FACTORY', 'mock')
 

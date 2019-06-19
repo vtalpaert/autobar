@@ -178,7 +178,8 @@ UPLOAD_FOR_MIX = 'mixes'
 
 # Settings for the bar configuration
 INTERFACE_USE_DUMMY = False
-IGNORE_EMPTY_DISPENSER = False  # if dispenser is suspected empty, mark as empty in db
+MARK_NOT_SERVING_DISPENSERS_AS_EMPTY = True  # if dispenser is suspected empty, mark as empty in db
+EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE = True
 UI_SHOW_ONLY_REAL_INGREDIENTS = False
 
 JOYSTICK_NAME = 'DragonRise Inc.   Generic   USB  Joystick  '

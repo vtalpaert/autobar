@@ -5,9 +5,8 @@ from django.db import models
 import solo.models
 from django.utils.text import get_valid_filename
 
-from autobar import settings
+from django.conf import settings
 DISPENSER_CHOICES = [(i, i) for i in range(settings.PUMPS_NB)]
-DEFAULT_IGNORE_EMPTY = settings.IGNORE_EMPTY_DISPENSER
 
 
 def _cut(value, low=None, high=None):
@@ -39,19 +38,19 @@ class Ingredient(models.Model):
     def __str__(self):
         return self.name
 
-    def dispensers(self, ignore_empty):
+    def dispensers(self, filter_out_empty):
         dispensers = self.dispenser_set.all()
-        if not ignore_empty:
+        if filter_out_empty:
             dispensers = dispensers.filter(is_empty=False)
         return dispensers
 
-    def is_available(self, ignore_empty=DEFAULT_IGNORE_EMPTY):
-        return self.added_separately or self.dispensers(ignore_empty).exists()
+    def is_available(self):
+        return self.added_separately or self.dispensers(filter_out_empty=settings.EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE).exists()
 
     @staticmethod
-    def available_ingredients(ingredients_in_dispensers=None, ignore_empty=DEFAULT_IGNORE_EMPTY, include_added_separately=False):
+    def available_ingredients(ingredients_in_dispensers=None, include_added_separately=False):
         if ingredients_in_dispensers is None:
-            ingredients_in_dispensers = Dispenser.ingredients_in_dispensers(ignore_empty)
+            ingredients_in_dispensers = Dispenser.ingredients_in_dispensers(filter_out_empty=settings.EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE)
         ingredients = Ingredient.objects.filter(pk__in=ingredients_in_dispensers)
         if include_added_separately:
             return ingredients.union(Ingredient.objects.filter(added_separately=True))
@@ -63,9 +62,9 @@ class Ingredient(models.Model):
         return Ingredient.objects.exclude(alcohol_percentage=0)
 
     @staticmethod
-    def available_alcohols(ingredients_in_dispensers=None, ignore_empty=DEFAULT_IGNORE_EMPTY):
+    def available_alcohols(ingredients_in_dispensers=None):
         if ingredients_in_dispensers is None:
-            ingredients_in_dispensers = Dispenser.ingredients_in_dispensers(ignore_empty)
+            ingredients_in_dispensers = Dispenser.ingredients_in_dispensers(filter_out_empty=settings.EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE)
         return Ingredient.alcohols().filter(id__in=ingredients_in_dispensers)
 
 
@@ -145,8 +144,8 @@ class Mix(models.Model):
         q_and_d = self.doses.values_list('quantity', 'ingredient__density')
         return sum(map(lambda qd: qd[0] * settings.UNIT_CONVERSION_VOLUME_SI * qd[1], q_and_d))
 
-    def is_available(self, ignore_empty=DEFAULT_IGNORE_EMPTY):
-        return all(ingredient.is_available(ignore_empty=ignore_empty) for ingredient in self.ingredients.all())
+    def is_available(self):
+        return all(ingredient.is_available() for ingredient in self.ingredients.all())
 
     def calibrate_volume_to(self, desired_total):
         """Look out you respect the correct units"""
@@ -156,11 +155,8 @@ class Mix(models.Model):
             dose.save()
 
     @staticmethod
-    def filter_by_available(mixes=None, ignore_empty=DEFAULT_IGNORE_EMPTY):
-        available_ingredients_in_dispenser = Ingredient.available_ingredients(
-            ignore_empty=ignore_empty,
-            include_added_separately=False
-        )
+    def filter_by_available(mixes=None):
+        available_ingredients_in_dispenser = Ingredient.available_ingredients(include_added_separately=False)
         mixes = mixes if mixes is not None else Mix.objects.all()
         mixes_with_at_least_one_ingredient = mixes.filter(
             ingredients__in=available_ingredients_in_dispenser
@@ -174,11 +170,11 @@ class Mix(models.Model):
         )
 
     @staticmethod
-    def naive_available(mixes=None, ignore_empty=DEFAULT_IGNORE_EMPTY):
+    def naive_available(mixes=None):
         mixes = mixes if mixes is not None else Mix.objects.all()
         available = []
         for mix in mixes:
-            if mix.is_available(ignore_empty=ignore_empty):
+            if mix.is_available():
                 available.append(mix)
         return available
 
@@ -240,9 +236,9 @@ class Dispenser(models.Model):
         super(Dispenser, self).save(*args, **kwargs)
 
     @staticmethod
-    def ingredients_in_dispensers(ignore_empty):
+    def ingredients_in_dispensers(filter_out_empty):
         dispensers = Dispenser.objects.all()
-        if not ignore_empty:
+        if filter_out_empty:
             dispensers = dispensers.filter(is_empty=False)
         return dispensers.values_list('ingredient', flat=True)
 
