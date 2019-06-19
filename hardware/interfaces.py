@@ -161,6 +161,8 @@ class HardwareInterface(Singleton):
             if timeout:
                 if time.perf_counter() > timeout + start_counter:
                     return False
+            if self.state != 2:
+                return False
             time.sleep(wait_secs)
         return True
 

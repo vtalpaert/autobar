@@ -41,7 +41,6 @@ function continuous_check_order(order_id, max_try) {
         type: 'GET',
         url:"/order/check/" + order_id,
         success: async function(response){
-            console.log(response);
             display_order_state(response);
             if (!response['done'] && max_try > 0) {
                 await sleep(100);

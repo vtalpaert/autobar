@@ -69,9 +69,37 @@
       });
     }
 
+    var switched_to_stop_button = false;
+    function stop_button() {
+      $("#submitme").prop('disabled', true);
+      switched_to_stop_button = true;
+      setTimeout(function() {
+        $("#submitme").removeClass("btn-primary");
+        $("#submitme").addClass("btn-danger");
+        $("#submitme").html('STOP');
+        $("#submitme").prop('disabled', false);
+      }, 2000);
+    }
+
     $("#submitme").on('click', function(e){
       e.preventDefault();
-      $.ajax({
+      if (switched_to_stop_button) {
+          $.ajax({
+            type: 'POST',
+            url:"/hardware/interface/stop",
+            data: {
+              csrfmiddlewaretoken: '{{ csrf_token }}',
+            },
+            success: function(response){
+              $("#submitme").prop('disabled', true);
+              $("#submitme").html('STOPPED');
+            },
+            error: function(error) {
+              $("#modal").html(error.responseText);
+            }
+        });
+      } else {
+        $.ajax({
           type: 'POST',
           url:"{% url 'create_order' mix.id %}",
           data: {
@@ -79,13 +107,14 @@
           },
           success: function(response){
             display_order_state(response);
-            $("#submitme").prop('disabled', true);
-            continuous_check_order(response['order_id'], 1000);
+            stop_button();
+            continuous_check_order(response['order_id'], 500);
           },
           error: function(error) {
             $("#modal").html(error.responseText);
           }
-      });
+        });
+      }
     });
 
     show_interface_state(); // from report_interface_state.js
