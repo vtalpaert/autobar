@@ -79,17 +79,18 @@
     <div class="container">
       {% for mix in mixes %}
       <div class="row">
-        <div class="col-md-4">
+        {% comment %}<div class="col-md-4">{% endcomment %}
           <div class="card mb-4 shadow-sm">
             {% if mix.image %}
-            <img class="card-img-top" src="{{ MEDIA_URL }}{{ mix.image }}" alt="Card image cap">
+            <img class="card-img-top" src="{{ MEDIA_URL }}{{ mix.image }}" alt="">
             {% endif %}
             <div class="card-body">
-              <h2>{{ mix }}</h2>
-              <p class="card-text">{{ mix.description }}</p>
+              {% ingredient_tags mix %}
+              <h1>{{ mix }}</h1>
+              {% comment %}<p class="card-text">{{ mix.description }}</p>{% endcomment %}
               <div class="d-flex justify-content-between align-items-center">
                 <!-- Modal HTML -->
-                <button type="button" class="modal-mix btn btn-sm btn-outline-secondary" data-id="{% url 'modal_mix' mix.pk %}">View</button>
+                <button type="button" class="modal-mix btn btn-md btn-secondary" data-id="{% url 'modal_mix' mix.pk %}">Show more</button>
                 {% comment %}
                 <button type="button" class="modal-order btn btn-sm btn-outline-secondary" data-id="{% url 'order_form' mix.pk %}">Order</button>
                 {% endcomment %}
@@ -97,7 +98,7 @@
               </div>
             </div>
           </div>
-        </div>
+          {% comment %}</div>{% endcomment %}
       </div>
       {% empty %}
           No mixes.

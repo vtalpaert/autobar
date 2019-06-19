@@ -1,0 +1,5 @@
+<div class="btn-group btn-group-xs">
+{% for ingredient in ingredients %}
+<a class="btn btn-outline-dark" href="{% if ingredient.alcohol_percentage %}{% else %}#{% endif %}" role="button" style="background-color: #BED0F4;">{{ ingredient }}</a>
+{% endfor %}
+</div>
