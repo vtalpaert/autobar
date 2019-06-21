@@ -34,7 +34,7 @@
 
 <div class="modal-footer">
   {% include "_svg_as_img.html" %}
-  <button type="button" onclick="like_onclick();" class="btn btn-light" id="like-btn">
+  <button type="button" onclick="like_onclick('#like-svg', '{{ mix.id }}', '{{ csrf_token }}', '#modal');" class="btn btn-light" id="like-btn">
       <img id="like-svg" class="svg social-link" src="{{ MEDIA_URL }}icons/thumbs-up.svg"/>
   </button>
 
@@ -46,76 +46,10 @@
   <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 
   <script type = "text/javascript">
-    var liked = false;
-    function like_onclick()
-    {
-      if (liked) {
-        liked = false;
-        $("#like-svg")[0].style.fill = "";
-      } else {
-        liked = true;
-        $("#like-svg")[0].style.fill = "dodgerblue";
-      }
-      $.ajax({
-          type: 'POST',
-          url:"{% url 'like' mix.id %}",
-          data: {
-            csrfmiddlewaretoken: '{{ csrf_token }}',
-            like: liked
-          },
-          error: function(error) {
-            $("#modal").html(error.responseText);
-          }
-      });
-    }
+    liked = false; // keep this to make likes.js working
 
-    var switched_to_stop_button = false;
-    function stop_button() {
-      $("#submitme").prop('disabled', true);
-      switched_to_stop_button = true;
-      setTimeout(function() {
-        $("#submitme").removeClass("btn-primary");
-        $("#submitme").addClass("btn-danger");
-        $("#submitme").html('STOP');
-        $("#submitme").prop('disabled', false);
-      }, 2000);
-    }
-
-    $("#submitme").on('click', function(e){
-      e.preventDefault();
-      if (switched_to_stop_button) {
-          $.ajax({
-            type: 'POST',
-            url:"/hardware/interface/stop",
-            data: {
-              csrfmiddlewaretoken: '{{ csrf_token }}',
-            },
-            success: function(response){
-              $("#submitme").prop('disabled', true);
-              $("#submitme").html('STOPPED');
-            },
-            error: function(error) {
-              $("#modal").html(error.responseText);
-            }
-        });
-      } else {
-        $.ajax({
-          type: 'POST',
-          url:"{% url 'create_order' mix.id %}",
-          data: {
-            csrfmiddlewaretoken: '{{ csrf_token }}',
-          },
-          success: function(response){
-            display_order_state(response);
-            stop_button();
-            continuous_check_order(response['order_id'], 500);
-          },
-          error: function(error) {
-            $("#modal").html(error.responseText);
-          }
-        });
-      }
-    });
+    switched_to_stop_button = false; // keep this for working go and stop button
+    set_mixme_and_stop_button("#submitme", "{{ mix.id }}", "{{ csrf_token }}", "#modal");
 
     show_interface_state(); // from report_interface_state.js
   </script>
