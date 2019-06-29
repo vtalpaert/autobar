@@ -65,7 +65,7 @@ class GPIOSingleValue(BackgroundThread):
     """
     def __init__(
             self, parent, sample_wait):
-        super(GPIOQueue, self).__init__(target=self.fill)
+        super().__init__(target=self.fill)
         self.value = False
         self.sample_wait = float(sample_wait)
         self.full = Event()
