@@ -20,7 +20,7 @@ class GPIOQueue(BackgroundThread):
     :meth:`~EventsMixin._fire_events`.
     """
     def __init__(
-            self, parent, queue_len=5, sample_wait=0.0, partial=False, average=median):
+            self, parent, queue_len, sample_wait, partial, average=median):
         assert callable(average)
         super(GPIOQueue, self).__init__(target=self.fill)
         if queue_len < 1:
@@ -50,6 +50,34 @@ class GPIOQueue(BackgroundThread):
                     self.queue.append(read)
                 if not self.full.is_set() and len(self.queue) >= self.queue.maxlen:
                     self.full.set()
+        except ReferenceError:
+            # Parent is dead; time to die!
+            pass
+
+
+class GPIOSingleValue(BackgroundThread):
+    """
+    Extends :class:`GPIOThread`. Provides a background thread that monitors a
+    device's values and provides a running *average* (defaults to median) of
+    those values. If the *parent* device includes the :class:`EventsMixin` in
+    its ancestry, the thread automatically calls
+    :meth:`~EventsMixin._fire_events`.
+    """
+    def __init__(
+            self, parent, sample_wait):
+        super(GPIOQueue, self).__init__(target=self.fill)
+        self.value = False
+        self.sample_wait = float(sample_wait)
+        self.full = Event()
+        self.parent = weakref.proxy(parent)
+
+    def fill(self):
+        try:
+            while not self.stopping.wait(self.sample_wait):
+                read = self.parent._read()
+                #print(read)
+                if read is not False:
+                    self.value = read
         except ReferenceError:
             # Parent is dead; time to die!
             pass
@@ -103,7 +131,8 @@ class HX711(object):
         GPIO.setup(self._pd_sck, GPIO.OUT)  # pin _pd_sck is output only
         GPIO.setup(self._dout, GPIO.IN)  # pin _dout is input only
         self._channel, self._gain = channel, gain
-        self._queue = GPIOQueue(self, queue_len, sample_wait=sample_wait, partial=True)
+        #self._queue = GPIOQueue(self, queue_len, sample_wait=sample_wait, partial=True)
+        self._queue = GPIOSingleValue(self, sample_wait)
         self.channel = channel
         self.gain = gain
         self._queue.start()

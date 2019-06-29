@@ -189,6 +189,10 @@ class Dose(models.Model):
         help_text='The number in which order the dose must be served'
     )
 
+    @property
+    def weight(self):
+        return self.ingredient.density * (self.quantity * settings.UNIT_CONVERSION_VOLUME_SI)
+
     def __str__(self):
         if self.ingredient.added_separately:
             return str(self.ingredient)

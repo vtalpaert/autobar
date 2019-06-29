@@ -251,7 +251,7 @@ ALLOW_NO_GLASS_DETECTION = False  # continue if glass not detected
 WEIGHT_CELL_SERVING_TIMEOUT = 10  # [s] anomaly while serving threshold
 DELAY_BEFORE_SERVING = 2  # [s] delay between glass detection and starting to serve
 DELAY_BETWEEN_SERVINGS = 1  # [s] delay between one pump activating and the next one
-WEIGHT_CELL_MINIMUM_DETECTION = 1  # smallest detection (unit depends on WEIGHT_CELL_DEFAULT)
+WEIGHT_CELL_MINIMUM_DETECTION = 8  # smallest detection (unit depends on WEIGHT_CELL_DEFAULT)
 
 # Database settings and parameters
 UNIT_DENSITY = 'g/L'
@@ -260,7 +260,7 @@ UNIT_VOLUME = 'cL'
 UNIT_VOLUME_VERBOSE = 'centiliter'
 UNIT_MASS = 'g'
 UNIT_CONVERSION_VOLUME_SI = 1e-2  # from UNIT_VOLUME to SI
-UNIT_MASS_TO_VOLUME = UNIT_DENSITY_DEFAULT / UNIT_CONVERSION_VOLUME_SI  # 1 cL is 10 g
+UNIT_MASS_TO_VOLUME = UNIT_DENSITY_DEFAULT / UNIT_CONVERSION_VOLUME_SI  # 1 cL is 10 g  # TODO this is wrong
 
 # hardware states
 INTERFACE_STATES = {

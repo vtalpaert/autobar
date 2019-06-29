@@ -68,7 +68,7 @@ class Serve(AdvanceOrder):
                 self.order.accepted, self.interface._last_order = False, None
                 self.interface.state = 0
                 return self.order.save()
-            dispenser, weight = dispensers_query[0], dose.quantity
+            dispenser, weight = dispensers_query[0], dose.weight
             current_weight = self.interface.cell_weight()
             if weight < settings.WEIGHT_CELL_MINIMUM_DETECTION:
                 logger.debug(
@@ -79,7 +79,7 @@ class Serve(AdvanceOrder):
             try:
                 self.interface.demux_start(dispenser.number)
                 quantity_is_reached = self.interface.cell_wait_for_weight_total(
-                    weight + current_weight,
+                    weight + current_weight - 8,  # TODO this is naive correction
                     timeout=settings.WEIGHT_CELL_SERVING_TIMEOUT,
                     wait_secs=0,
                 )
@@ -114,6 +114,9 @@ class Serve(AdvanceOrder):
                 self.interface._last_order = None
                 return self.order.save()
             time.sleep(settings.DELAY_BETWEEN_SERVINGS)
+            final_weight = self.interface.cell_weight()
+            overshoot = final_weight - current_weight - weight
+            logger.debug('Overshoot of %s' % str(overshoot))
         self.interface.demux_stop()
         logger.info('Served one %s.' % self.order.mix)
         self.order.status, self.interface._last_order = 3, None  # done
