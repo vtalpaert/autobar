@@ -37,3 +37,9 @@ sudo apt install at-spi2-core florence
 ## References
 
 - [Weight module](https://circuitdigest.com/microcontroller-projects/arduino-weight-measurement-using-load-cell/)
+
+## Quick run
+
+xvfb-run -s "-screen 0 1400x900x24" bash
+python manage.py runserver 0.0.0.0:8000
+
