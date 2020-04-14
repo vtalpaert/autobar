@@ -1,5 +1,9 @@
+import subprocess
+
 from django.utils.log import logging
 from django.conf import settings
+
+from gpiozero import Button, LED
 
 from hardware.singletonmixin import Singleton
 from hardware.weight import WeightModule
@@ -18,6 +22,33 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.weight_module.init_from_settings(settings)
         self.pumps = Pumps()
 
+        # gpiozero objects
+        self.red_button = Button(pin=settings.GPIO_RED_BUTTON, bounce_time=settings.BOUNCE_TIME, hold_time=settings.HOLD_TIME)
+        self.red_button.when_held = self.on_red_button
+        self.green_button = Button(pin=settings.GPIO_GREEN_BUTTON, bounce_time=settings.BOUNCE_TIME, hold_time=settings.HOLD_TIME)
+        self.green_button.when_held = self.on_green_button
+        self.green_button_led = LED(pin=settings.GPIO_GREEN_BUTTON_LED)
+
+    def on_green_button(self):
+        logger.debug('Green button pressed')
+        self.force_serve_state()
+
+    def on_red_button(self):
+        logger.debug('Red button pressed')
+        self.shutdown()
+
+    def shutdown(self):
+        logger.info('Shutdown called')
+        subprocess.call(['shutdown', '-h', 'now'], shell=False)
+
+    def force_serve_state(self):
+        # must not bounce
+        if self.busy and self.current_order is not None:
+            if self.current_order.status == 1:
+                self.move_current_order_to_serving()
+            if self.current_order.status == 2:
+                self.abandon_current_order()
+
     def emergency_stop(self):
         self.weight_module.kill_current_task()
         self.abandon_current_order()
@@ -25,10 +56,11 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
 
     def abandon_current_order(self):
         self.pumps.stop_all()
+        self.green_button_led.off()
         if self.current_order.status != 4:
             # pass this if already abandoned
             self.current_order.status = 4  # abandon
-            self.current_order.save()  # triggers order_post_save
+            self.current_order.save()  # triggers order_post_save but we won't do anything
         self.current_order = None  # forget about current order
         self.busy = False  # ready to take on new orders
 
@@ -40,6 +72,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.current_order.save()
 
     def move_current_order_to_done(self):
+        self.green_button_led.off()
         self.current_order.status = 3
         self.current_order.save()
         #self.current_order = None  # forget about current order
@@ -102,6 +135,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             return self.abandon_current_order()
 
     def serve(self):
+        self.green_button_led.blink(on_time=settings.GREEN_BUTTON_LED_BLINK_TIME, off_time=GREEN_BUTTON_LED_BLINK_TIME)
         doses = order.mix.ordered_doses() if order.mix else []
         if order.doses_served < len(doses):
             # we have a new dose to serve
@@ -120,6 +154,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
                 self.busy = True
                 order.accepted, self.current_order = True, order
                 order.status = 1  # next step, the order is waiting for a glass
+                self.green_button_led.on()
                 logger.debug('%s was accepted' % order)
                 return order.save()
             else:
@@ -132,7 +167,10 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if order.accepted and self.current_order == order and self.busy:
             # current accepted order is processed here
             if order.status == 1:
-                self.wait_for_glass()
+                if settings.USE_GREEN_BUTTON_TO_START_SERVING:
+                    pass  # nothing to do, button press will trigger next state
+                else:
+                    self.wait_for_glass()
             elif order.status == 2:
                 self.serve()
             # elif order.status: don't care

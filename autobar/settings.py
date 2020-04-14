@@ -186,6 +186,17 @@ UI_SHOW_ONLY_REAL_INGREDIENTS = False
 GPIO_PUMPS = [1, 2, 3]
 GPIO_DT = 17
 GPIO_SCK = 18
+GPIO_RED_BUTTON = 0
+GPIO_GREEN_BUTTON = 0
+GPIO_GREEN_BUTTON_LED = 0
+
+GREEN_BUTTON_BOUNCE_TIME = 3  # length of time (in seconds) that the component will ignore changes in state after an initial change
+GREEN_BUTTON_HOLD_TIME = 0.1  # The length of time (in seconds) to wait after the button is pushed, until executing the when_held handler
+RED_BUTTON_BOUNCE_TIME = 10
+RED_BUTTON_HOLD_TIME = 5
+GREEN_BUTTON_LED_BLINK_TIME = 0.5  # [s] half period
+
+USE_GREEN_BUTTON_TO_START_SERVING = True  # if False, serving is triggered by sensing if glass is present
 
 # WEIGHT MODULE
 WEIGHT_CELL_DEFAULT = {
@@ -208,8 +219,8 @@ WEIGHT_CELL_DEFAULT = {
 }
 WEIGHT_CELL_CHANNEL = 'A'
 WEIGHT_CELL_GAIN = 128
-
 WEIGHT_CELL_QUEUE_LENGTH = 10
+
 WEIGHT_CELL_GLASS_DETECTION_VALUE = 10  # value for scale (unit depends on WEIGHT_CELL_DEFAULT)
 WEIGHT_CELL_GLASS_DETECTION_TIMEOUT = 10  # [s] abandon glass detection
 SERVE_EVEN_IF_NO_GLASS_DETECTED = False  # continue if glass not detected

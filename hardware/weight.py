@@ -241,7 +241,7 @@ class WeightModule(object):
             channel=settings.WEIGHT_CELL_CHANNEL
         )
         maxlen = maxlen if maxlen is not None else settings.WEIGHT_CELL_QUEUE_LENGTH
-        self.delay_measure = delay_measure is delay_measure is not None else settings.WEIGHT_CELL_DELAY_MEASURE
+        self.delay_measure = delay_measure if delay_measure is not None else settings.WEIGHT_CELL_DELAY_MEASURE
         self.queue = deque(maxlen=maxlen)
         config = WEIGHT_CELL_DEFAULT[settings.WEIGHT_CELL_CHANNEL][settings.WEIGHT_CELL_GAIN]
         self.offset = config['offset']
