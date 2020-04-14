@@ -14,4 +14,3 @@ python-Levenshtein
 # hardware app deps
 gpiozero
 RPi.GPIO
-pygame

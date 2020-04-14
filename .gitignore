@@ -2,6 +2,6 @@
 .vscode/
 *.pyc
 db.sqlite3
-media/
+media/mixes/
 static/
 autobar.log*
