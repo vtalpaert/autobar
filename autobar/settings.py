@@ -177,18 +177,18 @@ UPLOAD_FOR_MIX = 'mixes'
 
 
 # Settings for the bar configuration
-INTERFACE_USE_DUMMY = False
+INTERFACE_USE_DUMMY = True
 MARK_NOT_SERVING_DISPENSERS_AS_EMPTY = True  # if dispenser is suspected empty, mark as empty in db
 EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE = True
 UI_SHOW_ONLY_REAL_INGREDIENTS = False
 
-# PINS
-GPIO_PUMPS = [1, 2, 3]
+# PINS in BCM numbering
+GPIO_PUMPS = [27, 22, 23, 24, 25, 5, 6, 12, 16, 26]
 GPIO_DT = 17
 GPIO_SCK = 18
-GPIO_RED_BUTTON = 0
-GPIO_GREEN_BUTTON = 0
-GPIO_GREEN_BUTTON_LED = 0
+GPIO_RED_BUTTON = 7
+GPIO_GREEN_BUTTON = 8
+GPIO_GREEN_BUTTON_LED = 13
 
 GREEN_BUTTON_BOUNCE_TIME = 3  # length of time (in seconds) that the component will ignore changes in state after an initial change
 GREEN_BUTTON_HOLD_TIME = 0.1  # The length of time (in seconds) to wait after the button is pushed, until executing the when_held handler
@@ -238,12 +238,12 @@ UNIT_CONVERSION_VOLUME_SI = 1e-2  # from UNIT_VOLUME to SI
 UNIT_MASS_TO_VOLUME = UNIT_DENSITY_DEFAULT / UNIT_CONVERSION_VOLUME_SI  # 1 cL is 10 g  # TODO this is wrong
 
 # states
+_SERVING_STATE_WAITING_MESSAGE = 'Press button to start' if USE_GREEN_BUTTON_TO_START_SERVING else 'Waiting for glass'
 
 SERVING_STATES_CHOICES = (
     (0, 'Init'),
-    (1, 'Waiting for glass'),
+    (1, _SERVING_STATE_WAITING_MESSAGE),
     (2, 'Serving'),
-    (3, 'Done'),
+    (3, 'Finished'),
     (4, 'Abandon'),
 )
-DONE_SERVING_VALUE = SERVING_STATES_CHOICES[3][0]

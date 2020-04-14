@@ -3,22 +3,23 @@ function sleep(ms) {
 }
 
 function set_state_html(text) {
-    $("#interface-state").html(text);
+    $("#hardware-state").html(text);
 }
 
-function change_interface_color(prev, next) {
-    $("#interface-state").removeClass(prev);
-    $("#interface-state").addClass(next);
+function change_hardware_color(prev, next) {
+    $("#hardware-state").removeClass(prev);
+    $("#hardware-state").addClass(next);
 }
 
-function show_interface_state() {
+function show_hardware_state() {
     $.ajax({
         type: 'GET',
-        url:"/hardware/interface",
+        url:"/hardware/info",
         success: function(response){
             set_state_html(response['state_verbose']);
         },
         error: function(error) {
+            console.log(error);
             $("#modal").html(error.responseText);
         }
     });
@@ -28,11 +29,11 @@ function display_order_state(response) {
     if (response['accepted']) {
         set_state_html(response['status_verbose']);
         if (response['done']) {
-            change_interface_color("btn-secondary", "btn-success");
+            change_hardware_color("btn-secondary", "btn-success");
         }
     } else {
         set_state_html('Order was refused');
-        change_interface_color("btn-secondary", "btn-danger");
+        change_hardware_color("btn-secondary", "btn-danger");
     }
 }
 
@@ -48,6 +49,7 @@ function continuous_check_order(order_id, max_try) {
             }
         },
         error: function(error) {
+            console.log(error);
             $("#modal").html(error.responseText);
         }
     });

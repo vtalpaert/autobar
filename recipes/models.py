@@ -269,6 +269,9 @@ class Order(models.Model):
     def status_verbose(self):
         return settings.SERVING_STATES_CHOICES[self.status][1]
 
+    def is_done(self):
+        return self.status in [3, 4]
+
 
 class Configuration(solo.models.SingletonModel):
     updated_at = models.DateTimeField(auto_now=True)

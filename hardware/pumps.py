@@ -1,8 +1,8 @@
 from gpiozero import DigitalOutputDevice
 
 class Pumps:
-    def __init__(self):
-        self.pumps = [DigitalOutputDevice(pin=pin) for pin in []]
+    def __init__(self, pin_factory=None):
+        self.pumps = [DigitalOutputDevice(pin=pin, pin_factory=pin_factory) for pin in []]
 
     def stop_all(self):
         return [pump.off() for pump in self.pumps]

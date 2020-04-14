@@ -10,7 +10,6 @@ import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 
 
-
 class HX711(object):
     """
     HX711 represents chip for reading load cells.

@@ -4,11 +4,18 @@ from django.utils.log import logging
 from django.conf import settings
 
 from gpiozero import Button, LED
+from gpiozero.pins.mock import MockFactory
 
 from hardware.singletonmixin import Singleton
-from hardware.weight import WeightModule
+try:
+    from hardware.weight import WeightModule
+except RuntimeError:
+    class WeightModule:
+        def init_from_settings(self, settings):
+            print('No WeightModule')
+        def kill_current_task(self):
+            print('Kill task called')
 from hardware.pumps import Pumps
-from hardware import process_order
 
 logger = logging.getLogger('autobar')
 
@@ -20,14 +27,15 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.current_order = None  # not mixing anything
         self.weight_module = WeightModule()
         self.weight_module.init_from_settings(settings)
-        self.pumps = Pumps()
 
         # gpiozero objects
-        self.red_button = Button(pin=settings.GPIO_RED_BUTTON, bounce_time=settings.BOUNCE_TIME, hold_time=settings.HOLD_TIME)
+        pin_factory = MockFactory() if settings.INTERFACE_USE_DUMMY else None
+        self.pumps = Pumps(pin_factory)
+        self.red_button = Button(pin=settings.GPIO_RED_BUTTON, bounce_time=settings.RED_BUTTON_BOUNCE_TIME, hold_time=settings.RED_BUTTON_HOLD_TIME, pin_factory=pin_factory)
         self.red_button.when_held = self.on_red_button
-        self.green_button = Button(pin=settings.GPIO_GREEN_BUTTON, bounce_time=settings.BOUNCE_TIME, hold_time=settings.HOLD_TIME)
+        self.green_button = Button(pin=settings.GPIO_GREEN_BUTTON, bounce_time=settings.GREEN_BUTTON_BOUNCE_TIME, hold_time=settings.GREEN_BUTTON_HOLD_TIME, pin_factory=pin_factory)
         self.green_button.when_held = self.on_green_button
-        self.green_button_led = LED(pin=settings.GPIO_GREEN_BUTTON_LED)
+        self.green_button_led = LED(pin=settings.GPIO_GREEN_BUTTON_LED, pin_factory=pin_factory)
 
     def on_green_button(self):
         logger.debug('Green button pressed')
@@ -71,7 +79,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.current_order.status = 2
         self.current_order.save()
 
-    def move_current_order_to_done(self):
+    def move_current_order_to_finished(self):
         self.green_button_led.off()
         self.current_order.status = 3
         self.current_order.save()
@@ -143,7 +151,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             self.serve_dose(dose)
         elif order.doses_served == len(doses):
             # all the doses were served
-            self.move_current_order_to_done()
+            self.move_current_order_to_finished()
 
     def order_post_save(self, sender, instance, created, raw, using, update_fields, **kwargs):
         order = instance

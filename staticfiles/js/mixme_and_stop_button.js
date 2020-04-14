@@ -16,7 +16,7 @@ function set_mixme_and_stop_button(div_id, mix_id, csrf_token, error_div_id) {
     if (switched_to_stop_button) {
         $.ajax({
           type: 'POST',
-          url:"/hardware/interface/stop",
+          url:"/hardware/emergencystop",
           data: {
             csrfmiddlewaretoken: csrf_token,
           },
@@ -25,6 +25,7 @@ function set_mixme_and_stop_button(div_id, mix_id, csrf_token, error_div_id) {
             $(div_id).html('STOPPED');
           },
           error: function(error) {
+            console.log(error);
             $(error_div_id).html(error.responseText);
           }
       });
@@ -41,6 +42,7 @@ function set_mixme_and_stop_button(div_id, mix_id, csrf_token, error_div_id) {
           continuous_check_order(response['order_id'], 500);
         },
         error: function(error) {
+          console.log(error);
           $(error_div_id).html(error.responseText);
         }
       });
