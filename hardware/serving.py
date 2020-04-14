@@ -18,6 +18,11 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.weight_module.init_from_settings(settings)
         self.pumps = Pumps()
 
+    def emergency_stop(self):
+        self.weight_module.kill_current_task()
+        self.abandon_current_order()
+        logger.info('Emergency stop!')
+
     def abandon_current_order(self):
         self.pumps.stop_all()
         if self.current_order.status != 4:

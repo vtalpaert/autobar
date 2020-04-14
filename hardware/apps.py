@@ -6,6 +6,6 @@ class HardwareConfig(AppConfig):
     name = 'hardware'
 
     def ready(self):
-        from .interfaces import HardwareInterface
-        interface = HardwareInterface.getInstance()
-        post_save.connect(interface.order_post_save, sender='recipes.Order', dispatch_uid='HardwareInterface')
+        from .serving import CocktailArtist
+        artist = CocktailArtist.getInstance()
+        post_save.connect(artist.order_post_save, sender='recipes.Order', dispatch_uid='CocktailArtist')

@@ -201,6 +201,7 @@ class BackgroundTask(threading.Thread):
     def __init__(self, lock, condition, callback, delay, timeout, on_timeout):
         super().__init__()
         self.deamon = True
+        self.exit_event = threading.Event()
         self.lock = lock
         self.condition = weakref.proxy(condition)
         self.callback = weakref.proxy(callback)
@@ -210,7 +211,7 @@ class BackgroundTask(threading.Thread):
 
     def run(self):
         start = time.time()
-        while not self.condition():
+        while not self.condition() and not self.exit_event.is_set():
             if time.time() - start > self.timeout:
                 print('timeout!')
                 # release before on_timeout
@@ -220,12 +221,14 @@ class BackgroundTask(threading.Thread):
             time.sleep(self.delay)
         # release before callback, in case callback starts a new thread
         self.lock.release()
-        self.callback()
+        if not self.exit_event.is_set():
+            self.callback()
 
 
 class WeightModule(object):
     def __init__(self):
         self.background_task_lock = threading.Lock()
+        self.thread = None
         self.cell = None
         self.offset = 0
         self.ratio = 1
@@ -346,6 +349,10 @@ class WeightModule(object):
             return False
         else:
             return False
+
+    def kill_current_task(self):
+        if self.thread is not None:
+            self.thread.exit_event.set()
 
 
 if __name__ == '__main__':

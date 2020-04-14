@@ -3,28 +3,27 @@ from django.http import JsonResponse
 from django.utils.log import logging
 from django.conf import settings
 
-from hardware.interfaces import HardwareInterface
+from hardware.serving import CocktailArtist
 
 logger = logging.getLogger('autobar')
 
 
-class InterfaceIsServingView(View):
+class WhatIsArtistDoingView(View):
     def get(self, request, *args, **kwargs):
-        interface = HardwareInterface.getInstance()
+        artist = CocktailArtist.getInstance()
         return JsonResponse(
             {
-                'is_serving': interface._serving
+                'busy': artist.busy,
+                'current_order': artist.current_order
             }
         )
 
-class StopInterfaceView(View):
+class EmergencyStopView(View):
     def post(self, request, *args, **kwargs):
-        interface = HardwareInterface.getInstance()
+        artist = CocktailArtist.getInstance()
         response = {
-            'previous_state': interface.state,
-            'was_locked': interface.locked,
+            'busy': artist.busy,
+            'current_order': artist.current_order,
         }
-        interface.state = 0
-        interface.demux_stop()
-        logger.info('Stopped interface')
+        artist.emergency_stop()
         return JsonResponse(response)
