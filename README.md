@@ -41,7 +41,7 @@ The database comes from an open source project (I lost the link, I'll find it ag
 
 ### Setup
 
-I used this to install a virtual keyboard too use with the touchscreen :
+I used this to install a virtual keyboard for the touchscreen :
 
 ```bash
 sudo apt install at-spi2-core florence
@@ -75,5 +75,9 @@ Use Python 3.5+ and install the dependencies from `requirements.txt`
 
 ## Quick run
 
-xvfb-run -s "-screen 0 1400x900x24" bash
+```bash
+xvfb-run -s "-screen 0 1400x900x24" bash  # for when I used PyGame
 python manage.py runserver 0.0.0.0:8000
+```
+
+Yes I'm running Django in debug mode. As long as you run on your local network this will help your deployment.
