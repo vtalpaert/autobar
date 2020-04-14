@@ -3,84 +3,12 @@
 from collections import deque
 import time
 from statistics import median, StatisticsError
+import threading
 import weakref
 
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 
-from hardware.background_threads import BackgroundThread, Event
-
-
-class GPIOQueue(BackgroundThread):
-    """
-    Extends :class:`GPIOThread`. Provides a background thread that monitors a
-    device's values and provides a running *average* (defaults to median) of
-    those values. If the *parent* device includes the :class:`EventsMixin` in
-    its ancestry, the thread automatically calls
-    :meth:`~EventsMixin._fire_events`.
-    """
-    def __init__(
-            self, parent, queue_len, sample_wait, partial, average=median):
-        assert callable(average)
-        super(GPIOQueue, self).__init__(target=self.fill)
-        if queue_len < 1:
-            raise ValueError('queue_len must be at least one')
-        self.queue = deque(maxlen=queue_len)
-        self.partial = bool(partial)
-        self.sample_wait = float(sample_wait)
-        self.full = Event()
-        self.parent = weakref.proxy(parent)
-        self.average = average
-
-    @property
-    def value(self):
-        if not self.partial:
-            self.full.wait()
-        try:
-            return self.average(self.queue)
-        except (ZeroDivisionError, StatisticsError):
-            return False
-
-    def fill(self):
-        try:
-            while not self.stopping.wait(self.sample_wait):
-                read = self.parent._read()
-                #print(read)
-                if read is not False:
-                    self.queue.append(read)
-                if not self.full.is_set() and len(self.queue) >= self.queue.maxlen:
-                    self.full.set()
-        except ReferenceError:
-            # Parent is dead; time to die!
-            pass
-
-
-class GPIOSingleValue(BackgroundThread):
-    """
-    Extends :class:`GPIOThread`. Provides a background thread that monitors a
-    device's values and provides a running *average* (defaults to median) of
-    those values. If the *parent* device includes the :class:`EventsMixin` in
-    its ancestry, the thread automatically calls
-    :meth:`~EventsMixin._fire_events`.
-    """
-    def __init__(
-            self, parent, sample_wait):
-        super().__init__(target=self.fill)
-        self.value = False
-        self.sample_wait = float(sample_wait)
-        self.full = Event()
-        self.parent = weakref.proxy(parent)
-
-    def fill(self):
-        try:
-            while not self.stopping.wait(self.sample_wait):
-                read = self.parent._read()
-                #print(read)
-                if read is not False:
-                    self.value = read
-        except ReferenceError:
-            # Parent is dead; time to die!
-            pass
 
 
 class HX711(object):
@@ -93,10 +21,8 @@ class HX711(object):
     def __init__(self,
                  dout_pin,
                  pd_sck_pin,
-                 queue_len=6,
                  gain=128,
-                 channel='A',
-                 sample_wait=0.1):
+                 channel='A'):
         """
         Init a new instance of HX711
 
@@ -115,27 +41,11 @@ class HX711(object):
         self._dout, self._pd_sck = dout_pin, pd_sck_pin
         self._debug_mode = False
 
-        defaults = {
-            'offset': 0,
-            'last_raw_data': 0,
-            'ratio': 1,
-        }
-        self._data = {
-            'A': {128: dict(defaults), 64: dict(defaults)},
-            'B': {32: dict(defaults)}
-        }
-        self._data['A'][128]['signal'] = 1
-        self._data['B'][32]['signal'] = 2
-        self._data['A'][64]['signal'] = 3
+        self._data = {'A': {128: 1, 64: 3}, 'B': {32: 2}}
 
         GPIO.setup(self._pd_sck, GPIO.OUT)  # pin _pd_sck is output only
         GPIO.setup(self._dout, GPIO.IN)  # pin _dout is input only
-        self._channel, self._gain = channel, gain
-        #self._queue = GPIOQueue(self, queue_len, sample_wait=sample_wait, partial=True)
-        self._queue = GPIOSingleValue(self, sample_wait)
-        self.channel = channel
-        self.gain = gain
-        self._queue.start()
+        self.channel, self.gain = channel, gain
 
     @property
     def channel(self):
@@ -172,43 +82,10 @@ class HX711(object):
         Returns:
             bool: True when it is ok. False otherwise.
         """
-        result = self.value
+        result = self._read()
         if result is not False:
             self.offset = result
         return result is not False
-
-    @property
-    def offset(self):
-        return self._data[self._channel][self._gain]['offset']
-
-    @offset.setter
-    def offset(self, offset):
-        self._data[self._channel][self._gain]['offset'] = offset
-
-    @property
-    def ratio(self):
-        """
-        set_scale_ratio method sets the ratio for calculating
-        weight in desired units. In order to find this ratio for
-        example to grams or kg. You must have known weight.
-
-        Args:
-            ratio(float): number > 0.0 that is used for
-                conversion to weight units
-        """
-        return self._data[self._channel][self._gain]['ratio']
-
-    @ratio.setter
-    def ratio(self, ratio):
-        self._data[self._channel][self._gain]['ratio'] = ratio
-
-    @property
-    def _last_raw_data(self):
-        return self._data[self._channel][self._gain]['last_raw_data']
-
-    @_last_raw_data.setter
-    def _last_raw_data(self, data):
-        self._data[self._channel][self._gain]['last_raw_data'] = data
 
     def _set_channel_gain(self):
         """
@@ -219,7 +96,7 @@ class HX711(object):
         Returns: bool True if HX711 is ready for the next reading
             False if HX711 is not ready for the next reading
         """
-        num = self._data[self._channel][self._gain]['signal']
+        num = self._data[self._channel][self._gain]
         for _ in range(num):
             start_counter = time.perf_counter()
             GPIO.output(self._pd_sck, True)
@@ -299,24 +176,6 @@ class HX711(object):
             print('Converted 2\'s complement value: {}\n'.format(signed_data))
         return signed_data
 
-    @property
-    def value(self):
-        return self._queue.value
-
-    def get_data(self):
-        result = self.value
-        if result is not False:
-            return result - self.offset
-        else:
-            return False
-
-    def get_weight(self):
-        result = self.value
-        if result is not False:
-            return float((result - self.offset) * self.ratio)
-        else:
-            return False
-
     def power_down(self):
         """
         Power down method turns off the hx711.
@@ -331,37 +190,158 @@ class HX711(object):
         """
         GPIO.output(self._pd_sck, False)
         time.sleep(0.01)
-
-    def reset(self):
-        """
-        reset method resets the hx711 and prepare it for the next reading.
-
-        Returns: bool True when it is ready for reading.
-            Else it is not and it returns False
-        """
-        self.power_down()
-        self.power_up()
-        result = self.value
+        result = self._read()
         return result is not False
 
 
+class BackgroundTask(threading.Thread):
+    """TODO
+    """
+
+    def __init__(self, lock, condition, callback, delay, timeout, on_timeout):
+        super().__init__()
+        self.deamon = True
+        self.lock = lock
+        self.condition = weakref.proxy(condition)
+        self.callback = weakref.proxy(callback)
+        self.delay = delay
+        self.timeout = timeout
+        self.on_timeout = weakref.proxy(on_timeout)
+
+    def run(self):
+        start = time.time()
+        while not self.condition():
+            if time.time() - start > self.timeout:
+                print('timeout!')
+                # release before on_timeout
+                self.lock.release()
+                self.on_timeout()
+                return  # exit
+            time.sleep(self.delay)
+        # release before callback, in case callback starts a new thread
+        self.lock.release()
+        self.callback()
+
+
+class WeightModule(object):
+    def __init__(self):
+        self.background_task_lock = threading.Lock()
+        self.cell = None
+        self.offset = 0
+        self.ratio = 1
+
+    def init_from_settings(self, settings, maxlen=None, delay_measure=None):
+        self.cell = HX711(
+            settings.GPIO_DT,
+            settings.GPIO_SCK,
+            gain=settings.WEIGHT_CELL_GAIN,
+            channel=settings.WEIGHT_CELL_CHANNEL
+        )
+        maxlen = maxlen if maxlen is not None else settings.WEIGHT_CELL_QUEUE_LENGTH
+        self.delay_measure = delay_measure is delay_measure is not None else settings.WEIGHT_CELL_DELAY_MEASURE
+        self.queue = deque(maxlen=maxlen)
+        config = WEIGHT_CELL_DEFAULT[settings.WEIGHT_CELL_CHANNEL][settings.WEIGHT_CELL_GAIN]
+        self.offset = config['offset']
+        self.ratio = config['ratio']
+
+    def interactive_settings(self):
+        gpio_dt = int(input("Enter GPIO DT:"))
+        gpio_sck = int(input("Enter GPIO SCK:"))
+        channel = input("Enter channel (A or B)")
+        gain = int(input("Enter gain (32, 64 or 128)"))
+        maxlen = 100
+        self.cell = HX711(gpio_dt, gpio_sck, gain=gain, channel=channel)
+        self.delay_measure = 0.02
+        self.queue = deque(maxlen=maxlen)
+        self.offset = 0
+        self.ratio = 1
+
+        # tare
+        input("Empty the scale and presse enter")
+        print("Taring")
+        if not self.cell.power_up():
+            print("Cell could not power up")
+        success = [self.get_value() is not None for _ in range(maxlen)]
+        print("Had", sum(success), "good readings on", maxlen)
+        self.offset = self.get_value()
+        print("Offset will be", self.offset)
+
+        # ratio
+        known = float(input("Put a known weight on scale, and enter here the weight in grams"))
+        print("Wait")
+        self.queue.clear()
+        success = [self.get_value() is not None for _ in range(maxlen)]
+        print("Had", sum(success), "good readings on", maxlen)
+        value = self.get_value()
+        print("I read", value, ", minus offset is now", value - self.offset)
+        self.ratio = known / (value - self.offset)
+        print("My ratio is", self.ratio)
+        print("You wanted to read", known, "grams. My calculation outputs", self.convert_value_to_weight(value))
+
+        # test
+        print("Will now run a few tests")
+        def you_failed():
+            print("You failed to follow the above instruction")
+        def when_removed():
+            print("You removed the weight")
+            time.sleep(0.1)
+            def when_put_back_on():
+                print("You put the weight back")
+                time.sleep(0.1)
+                def too_fast():
+                    raise Exception("You should not see this")
+                def expected_timeout():
+                    print("We had the timeout, as expected")
+                    print("This was the last test")
+                print("I will now timeout in 5 seconds")
+                self.trigger_on_condition(too_fast, lambda weight: False, 5, expected_timeout)
+            print("You have 10 seconds to put the weight back on")
+            self.trigger_on_condition(when_put_back_on, lambda weight: weight > 0.9 * known, 10, you_failed)
+        print("You have 10 seconds to remove the weight")
+        self.trigger_on_condition(when_removed, lambda weight: weight < 0.9 * known, 10, you_failed)
+        print("Tests are running in background")
+        input("Enter to exit (but don't exit if tests are running")
+
+    def get_value(self):
+        if self.cell is None:
+            return None
+        value = self.cell._read()
+        if value is False:
+            return None
+        self.queue.append(value)
+        if self.queue:
+            return median(self.queue)
+        else:
+            return None
+
+    def convert_value_to_weight(self, value):
+        """Linear a*(x-b). Note parenthesis"""
+        return self.ratio * (value - self.offset)
+
+    def trigger_on_condition(self, callback, weight_condition, timeout, on_timeout):
+        """Will frequently test condition and trigger callback when True
+
+        weight_condition should look like: lambda weight: weight > 10
+        """
+        def apply_condition():
+            value = self.get_value()
+            if value is None:
+                return False  # do not trigger
+            else:
+                weight = self.convert_value_to_weight(value)
+                return weight_condition(weight)
+        self.thread = BackgroundTask(self.background_task_lock, apply_condition, callback, self.delay_measure, timeout, on_timeout)
+        acquired = self.background_task_lock.acquire()
+        if acquired:
+            self.queue.clear()
+            if self.cell.power_up():
+                self.thread.start()  # will release lock
+                return True
+            return False
+        else:
+            return False
+
+
 if __name__ == '__main__':
-    from collections import deque
-    from itertools import count
-    from time import sleep
-    dt = deque(maxlen=50)
-    cell = HX711(17, 18)
-    cell._debug_mode = True
-    sleep(1)
-    while cell.zero() is False:
-        print("zero")
-    while True:
-        start_counter = time.perf_counter()
-        for i in count():
-            data = cell.get_data()
-            if data is not False:
-                break
-        end_counter = time.perf_counter()
-        dt.append(1 / (end_counter - start_counter))
-        mean = sum(dt) / len(dt)
-        print('data:', data, '\tfreq:', mean, '\terrors:', i, '\n')
+    module = WeightModule()
+    module.interactive_settings()

@@ -42,4 +42,3 @@ sudo apt install at-spi2-core florence
 
 xvfb-run -s "-screen 0 1400x900x24" bash
 python manage.py runserver 0.0.0.0:8000
-

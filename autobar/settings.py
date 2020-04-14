@@ -182,20 +182,6 @@ MARK_NOT_SERVING_DISPENSERS_AS_EMPTY = True  # if dispenser is suspected empty,
 EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE = True
 UI_SHOW_ONLY_REAL_INGREDIENTS = False
 
-JOYSTICK_NAME = 'DragonRise Inc.   Generic   USB  Joystick  '
-BUTTONS_TO_PUMP_MAPPING = {
-    2: 0,
-    3: 1,
-    4: 2,
-    5: 3,
-    6: 4,
-    7: 5,
-    8: 6,
-    9: 7,
-    10: 8,
-    11: 9,
-}
-
 # PINS
 GPIO_INHIBIT1 = 5
 GPIO_INHIBIT2 = 16
@@ -206,26 +192,7 @@ GPIO_A2 = 26
 GPIO_DT = 17
 GPIO_SCK = 18
 
-# PINOUT
-DEMUX = (
-    {
-        'inh': GPIO_INHIBIT1,
-        'logic': (
-            GPIO_A1,
-            GPIO_B1,
-            GPIO_C1
-        ),
-    },
-    {
-        'inh': GPIO_INHIBIT2,
-        'logic': (
-            GPIO_A2,
-        ),
-    }
-)
-
-PUMPS_NB = sum([2**len(d['logic']) for d in DEMUX])
-
+# WEIGHT MODULE
 WEIGHT_CELL_DEFAULT = {
     'A': {
         128: {
@@ -244,7 +211,10 @@ WEIGHT_CELL_DEFAULT = {
         },
     },
 }
+WEIGHT_CELL_CHANNEL = 'A'
+WEIGHT_CELL_GAIN = 128
 
+WEIGHT_CELL_QUEUE_LENGTH = 10
 WEIGHT_CELL_GLASS_DETECTION_VALUE = 10  # value for scale (unit depends on WEIGHT_CELL_DEFAULT)
 WEIGHT_CELL_GLASS_DETECTION_TIMEOUT = 10  # [s] abandon glass detection
 ALLOW_NO_GLASS_DETECTION = False  # continue if glass not detected
@@ -262,12 +232,7 @@ UNIT_MASS = 'g'
 UNIT_CONVERSION_VOLUME_SI = 1e-2  # from UNIT_VOLUME to SI
 UNIT_MASS_TO_VOLUME = UNIT_DENSITY_DEFAULT / UNIT_CONVERSION_VOLUME_SI  # 1 cL is 10 g  # TODO this is wrong
 
-# hardware states
-INTERFACE_STATES = {
-    0: 'Ready to serve',
-    1: 'Manual control',
-    2: 'Mixing',
-}
+# states
 
 SERVING_STATES_CHOICES = (
     (0, 'Empty'),

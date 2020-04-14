@@ -123,4 +123,3 @@ class Serve(AdvanceOrder):
         self._wait_for_glass_removed(glass_weight)
         self.interface.state = 0  # release state lock
         return self.order.save()
-
