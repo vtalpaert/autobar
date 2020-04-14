@@ -183,12 +183,7 @@ EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE = True
 UI_SHOW_ONLY_REAL_INGREDIENTS = False
 
 # PINS
-GPIO_INHIBIT1 = 5
-GPIO_INHIBIT2 = 16
-GPIO_A1 = 6
-GPIO_B1 = 12
-GPIO_C1 = 13
-GPIO_A2 = 26
+GPIO_PUMPS = [1, 2, 3]
 GPIO_DT = 17
 GPIO_SCK = 18
 
@@ -217,11 +212,10 @@ WEIGHT_CELL_GAIN = 128
 WEIGHT_CELL_QUEUE_LENGTH = 10
 WEIGHT_CELL_GLASS_DETECTION_VALUE = 10  # value for scale (unit depends on WEIGHT_CELL_DEFAULT)
 WEIGHT_CELL_GLASS_DETECTION_TIMEOUT = 10  # [s] abandon glass detection
-ALLOW_NO_GLASS_DETECTION = False  # continue if glass not detected
+SERVE_EVEN_IF_NO_GLASS_DETECTED = False  # continue if glass not detected
 WEIGHT_CELL_SERVING_TIMEOUT = 10  # [s] anomaly while serving threshold
 DELAY_BEFORE_SERVING = 2  # [s] delay between glass detection and starting to serve
 DELAY_BETWEEN_SERVINGS = 1  # [s] delay between one pump activating and the next one
-WEIGHT_CELL_MINIMUM_DETECTION = 8  # smallest detection (unit depends on WEIGHT_CELL_DEFAULT)
 
 # Database settings and parameters
 UNIT_DENSITY = 'g/L'
@@ -235,7 +229,7 @@ UNIT_MASS_TO_VOLUME = UNIT_DENSITY_DEFAULT / UNIT_CONVERSION_VOLUME_SI  # 1 cL i
 # states
 
 SERVING_STATES_CHOICES = (
-    (0, 'Empty'),
+    (0, 'Init'),
     (1, 'Waiting for glass'),
     (2, 'Serving'),
     (3, 'Done'),

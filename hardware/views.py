@@ -8,13 +8,12 @@ from hardware.interfaces import HardwareInterface
 logger = logging.getLogger('autobar')
 
 
-class InterfaceView(View):
+class InterfaceIsServingView(View):
     def get(self, request, *args, **kwargs):
         interface = HardwareInterface.getInstance()
         return JsonResponse(
             {
-                'state': interface.state,
-                'state_verbose': settings.INTERFACE_STATES[interface.state],
+                'is_serving': interface._serving
             }
         )
 

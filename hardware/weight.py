@@ -318,6 +318,12 @@ class WeightModule(object):
         """Linear a*(x-b). Note parenthesis"""
         return self.ratio * (value - self.offset)
 
+    def make_constant_weight_measure(self):
+        self.queue.clear()
+        for _ in range(maxlen):
+            value = self.get_value()
+        return self.convert_value_to_weight(value)
+
     def trigger_on_condition(self, callback, weight_condition, timeout, on_timeout):
         """Will frequently test condition and trigger callback when True
 

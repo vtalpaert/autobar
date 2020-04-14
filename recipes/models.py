@@ -6,7 +6,7 @@ import solo.models
 from django.utils.text import get_valid_filename
 
 from django.conf import settings
-DISPENSER_CHOICES = [(i, i) for i in range(settings.PUMPS_NB)]
+DISPENSER_CHOICES = [(i, i) for i in range(len(settings.GPIO_PUMPS))]
 
 
 def _cut(value, low=None, high=None):
@@ -257,6 +257,7 @@ class Order(models.Model):
         blank=True,
     )
     status = models.PositiveSmallIntegerField(choices=settings.SERVING_STATES_CHOICES, default=0)
+    doses_served = models.PositiveSmallIntegerField(default=0)
     accepted = models.BooleanField(default=False)
 
     def __str__(self):
