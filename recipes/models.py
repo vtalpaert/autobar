@@ -276,6 +276,7 @@ class Order(models.Model):
 class Configuration(solo.models.SingletonModel):
     updated_at = models.DateTimeField(auto_now=True)
     show_only_available_mixes = models.BooleanField(default=False)
+    show_only_verified_mixes = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Configuration"

@@ -7,11 +7,10 @@ from django.utils.log import logging
 from django.shortcuts import get_object_or_404
 from django.http import Http404
 
-from bootstrap_modal_forms.generic import BSModalReadView, BSModalCreateView
+from bootstrap_modal_forms.generic import BSModalReadView
 
 from autobar import settings
-from .models import Mix, Order
-from .forms import CreateOrderForm
+from .models import Mix, Order, Configuration
 
 
 logger = logging.getLogger('autobar')
@@ -51,7 +50,11 @@ class Mixes(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        mixes = Mix.objects.filter(verified=True)
+        config = Configuration.get_solo()
+        if config.show_only_verified_mixes:
+            mixes = Mix.objects.filter(verified=True)
+        else:
+            mixes = Mix.objects.all()
 
         sort_by = get_or_none(kwargs, 'sort_by')
         sorts = list(order_by.keys()) + list(filters.keys())
@@ -80,29 +83,6 @@ class Mixes(TemplateView):
         return context
 
 
-class OrderModalView(BSModalCreateView):
-    template_name = 'recipes/modal_order.html'
-    form_class = CreateOrderForm
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['mix'] = self.get_mix()
-        return context
-
-    def get_mix(self):
-        try:
-            return self.mix
-        except AttributeError:
-            mix_id = get_or_none(self.kwargs, 'mix_id')
-            if not mix_id:
-                raise Http404('You should provide a Mix id in your url')
-            self.mix = get_object_or_404(Mix, id=mix_id)
-            return self.mix
-
-    def get_initial(self):
-        return {'mix': self.get_mix(), 'status': 1}
-
-
 class CreateOrderView(View):
     def post(self, request, mix_id, *args, **kwargs):
         mix = get_object_or_404(Mix, id=mix_id)
@@ -122,6 +102,7 @@ class CreateOrderView(View):
             }
         )
 
+
 class CheckOrderView(View):
     def get(self, request, order_id, *args, **kwargs):
         order = get_object_or_404(Order, id=order_id)
@@ -134,6 +115,7 @@ class CheckOrderView(View):
                 'done': order.is_done() or not order.accepted,
             }
         )
+
 
 class MixLikeView(View):
     def post(self, request, mix_id, *args, **kwargs):
