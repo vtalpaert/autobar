@@ -9,6 +9,7 @@ import weakref
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 
+from recipes.models import Configuration
 
 class HX711(object):
     """
@@ -232,19 +233,18 @@ class WeightModule(object):
         self.offset = 0
         self.ratio = 1
 
-    def init_from_settings(self, settings, maxlen=None, delay_measure=None):
+    def init_from_settings_and_config(self, settings, config):
+        """Pass settings and config since this file works without Django"""
         self.cell = HX711(
             settings.GPIO_DT,
             settings.GPIO_SCK,
-            gain=settings.WEIGHT_CELL_GAIN,
-            channel=settings.WEIGHT_CELL_CHANNEL
+            gain=config.weight_cell_gain,
+            channel=settings.weight_cell_channel
         )
-        maxlen = maxlen if maxlen is not None else settings.WEIGHT_CELL_QUEUE_LENGTH
-        self.delay_measure = delay_measure if delay_measure is not None else settings.WEIGHT_CELL_DELAY_MEASURE
-        self.queue = deque(maxlen=maxlen)
-        config = WEIGHT_CELL_DEFAULT[settings.WEIGHT_CELL_CHANNEL][settings.WEIGHT_CELL_GAIN]
-        self.offset = config['offset']
-        self.ratio = config['ratio']
+        self.delay_measure = config.weight_module_delay_measure
+        self.queue = deque(maxlen=config.weight_module_queue_length)
+        self.offset = config.weight_cell_offset
+        self.ratio = config.weight_cell_ratio
 
     def interactive_settings(self):
         gpio_dt = int(input("Enter GPIO DT:"))

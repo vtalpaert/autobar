@@ -9,7 +9,6 @@ from django.http import Http404
 
 from bootstrap_modal_forms.generic import BSModalReadView
 
-from autobar import settings
 from .models import Mix, Order, Configuration
 
 

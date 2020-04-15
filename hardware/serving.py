@@ -11,11 +11,13 @@ try:
     from hardware.weight import WeightModule
 except RuntimeError:
     class WeightModule:
-        def init_from_settings(self, settings):
+        def init_from_settings_and_config(self, settings, config):
             print('No WeightModule')
         def kill_current_task(self):
             print('Kill task called')
 from hardware.pumps import Pumps
+
+from recipes.models import Configuration
 
 logger = logging.getLogger('autobar')
 
@@ -23,17 +25,49 @@ logger = logging.getLogger('autobar')
 class CocktailArtist(Singleton):  # inherits Singleton, there can only be one artist at a time
     def __init__(self):
         print('Artist id', id(self))  # unique
+
         self.busy = False  # ready to take orders
         self.current_order = None  # not mixing anything
         self.weight_module = WeightModule()
-        self.weight_module.init_from_settings(settings)
+        self.pumps = None
+        self.red_button = None
+        self.green_button = None
+        self.green_button_led = None
+        self.reload_with_new_config()
+
+    def close(self):
+        self.weight_module.kill_current_task()
+        if self.pumps is not None:
+            self.pumps.close()
+        if self.red_button is not None:
+            self.red_button.close()
+        if self.green_button is not None:
+            self.green_button.close()
+        if self.green_button_led is not None:
+            self.green_button_led.close()
+
+    def reload_with_new_config(self, config=None):
+        logger.info('Cocktail artist reload config')
+        self.close()
+        if config is None:
+            config = Configuration.get_solo()
+
+        self.weight_module.init_from_settings_and_config(settings, config)
 
         # gpiozero objects
-        pin_factory = MockFactory() if settings.INTERFACE_USE_DUMMY else None
+        pin_factory = MockFactory() if config.hardware_use_dummy else None
         self.pumps = Pumps(pin_factory)
-        self.red_button = Button(pin=settings.GPIO_RED_BUTTON, bounce_time=settings.RED_BUTTON_BOUNCE_TIME, hold_time=settings.RED_BUTTON_HOLD_TIME, pin_factory=pin_factory)
+        self.red_button = Button(
+            pin=settings.GPIO_RED_BUTTON,
+            bounce_time=config.button_bounce_time_red,
+            hold_time=config.button_hold_time_red,
+            pin_factory=pin_factory)
         self.red_button.when_held = self.on_red_button
-        self.green_button = Button(pin=settings.GPIO_GREEN_BUTTON, bounce_time=settings.GREEN_BUTTON_BOUNCE_TIME, hold_time=settings.GREEN_BUTTON_HOLD_TIME, pin_factory=pin_factory)
+        self.green_button = Button(
+            pin=settings.GPIO_GREEN_BUTTON,
+            bounce_time=config.button_bounce_time_green,
+            hold_time=config.button_hold_time_green,
+            pin_factory=pin_factory)
         self.green_button.when_held = self.on_green_button
         self.green_button_led = LED(pin=settings.GPIO_GREEN_BUTTON_LED, pin_factory=pin_factory)
 
@@ -75,7 +109,8 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
     def move_current_order_to_serving(self):
         # no verification on status, do it outside this method
         # this is executed in a separate thread, so sleep is not a problem
-        time.sleep(settings.DELAY_BEFORE_SERVING)
+        config = Configuration.get_solo()
+        time.sleep(config.ux_delay_before_start_serving)
         self.current_order.status = 2
         self.current_order.save()
 
@@ -87,9 +122,10 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.busy = False  # ready to take on new orders
 
     def wait_for_glass(self):
-        pass_this_step_condition = lambda weight: weight > settings.WEIGHT_CELL_GLASS_DETECTION_VALUE
+        config = Configuration.get_solo()
+        pass_this_step_condition = lambda weight: weight > config.ux_glass_detection_value
         def glass_timeout():
-            if settings.SERVE_EVEN_IF_NO_GLASS_DETECTED:
+            if config.ux_serve_even_if_no_glass_detected:
                 self.move_current_order_to_serving()
             else:
                 logger.info('Time out while waiting for glass for %s' % self.current_order)
@@ -97,7 +133,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if self.weight_module.trigger_on_condition(
             self.move_current_order_to_serving,
             pass_this_step_condition,
-            settings.WEIGHT_CELL_GLASS_DETECTION_TIMEOUT,
+            config.ux_timeout_glass_detection,
             glass_timeout
         ):
             logger.debug('Will move %s to serving when glass is detected' % self.current_order)
@@ -114,6 +150,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             return None
 
     def serve_dose(self, dose):
+        config = Configuration.get_solo()
         dispenser = self.get_available_dispenser(dose)
         if dispenser is None:
             # can't serve
@@ -123,18 +160,18 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         stop_serving_when = lambda weight: weight - current_weight > dose.weight
         def finished_dose():
             self.pumps.stop(dispenser.number)
-            time.sleep(settings.DELAY_BETWEEN_SERVINGS)
+            time.sleep(config.ux_delay_between_two_doses)
             order.doses_served += 1
             order.save()
         def timeout_serving():
             self.pumps.stop(dispenser.number)
-            logger.info('Pump %i is not serving within %s seconds' % (dispenser.number, str(settings.WEIGHT_CELL_SERVING_TIMEOUT)))
-            if settings.MARK_NOT_SERVING_DISPENSERS_AS_EMPTY:
+            logger.info('Pump %i is not serving within %s seconds' % (dispenser.number, str(config.ux_timeout_serving)))
+            if config.ux_mark_not_serving_dispensers_as_empty:
                 logger.info('Mark %s as empty' % dispenser)
                 dispenser.is_empty = True
                 dispenser.save()
         self.pumps.start(dispenser.number)
-        if self.weight_module.trigger_on_condition(finished_dose, stop_serving_when, settings.WEIGHT_CELL_SERVING_TIMEOUT, timeout_serving):
+        if self.weight_module.trigger_on_condition(finished_dose, stop_serving_when, config.ux_timeout_serving, timeout_serving):
             logger.debug('Started serving %s using %s' % (dose, dispenser))
             return
         else:
@@ -143,7 +180,10 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             return self.abandon_current_order()
 
     def serve(self):
-        self.green_button_led.blink(on_time=settings.GREEN_BUTTON_LED_BLINK_TIME, off_time=GREEN_BUTTON_LED_BLINK_TIME)
+        config = Configuration.get_solo()
+        self.green_button_led.blink(
+            on_time=config.button_blink_time_led_green,
+            off_time=config.button_blink_time_led_green)
         doses = order.mix.ordered_doses() if order.mix else []
         if order.doses_served < len(doses):
             # we have a new dose to serve
@@ -175,7 +215,8 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if order.accepted and self.current_order == order and self.busy:
             # current accepted order is processed here
             if order.status == 1:
-                if settings.USE_GREEN_BUTTON_TO_START_SERVING:
+                config = Configuration.get_solo()
+                if config.ux_use_green_button_to_start_serving:
                     pass  # nothing to do, button press will trigger next state
                 else:
                     self.wait_for_glass()

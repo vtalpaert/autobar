@@ -164,12 +164,7 @@ UPLOAD_FOR_MIX = 'mixes'
 
 
 # Settings for UX behaviour
-INTERFACE_USE_DUMMY = True
-MARK_NOT_SERVING_DISPENSERS_AS_EMPTY = True  # if dispenser is suspected empty, mark as empty in db
-EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE = True
-UI_SHOW_ONLY_REAL_INGREDIENTS = False
-USE_GREEN_BUTTON_TO_START_SERVING = True  # if False, serving is triggered by sensing if glass is present
-SERVE_EVEN_IF_NO_GLASS_DETECTED = False  # continue if glass not detected
+# moved to recipes.models.Configuration
 
 # PINS in BCM numbering
 GPIO_PUMPS = [27, 22, 23, 24, 25, 5, 6, 12, 16, 26]
@@ -179,40 +174,11 @@ GPIO_RED_BUTTON = 7
 GPIO_GREEN_BUTTON = 8
 GPIO_GREEN_BUTTON_LED = 13
 
-GREEN_BUTTON_BOUNCE_TIME = 3  # length of time (in seconds) that the component will ignore changes in state after an initial change
-GREEN_BUTTON_HOLD_TIME = 0.1  # The length of time (in seconds) to wait after the button is pushed, until executing the when_held handler
-RED_BUTTON_BOUNCE_TIME = 10
-RED_BUTTON_HOLD_TIME = 5
-GREEN_BUTTON_LED_BLINK_TIME = 0.5  # [s] half period
-
 # WEIGHT MODULE
-WEIGHT_CELL_DEFAULT = {
-    'A': {
-        128: {
-            'offset': 0,
-            'ratio': 1,
-        },
-        64: {
-            'offset': 0,
-            'ratio': 1,
-        },
-    },
-    'B': {
-        32: {
-            'offset': 0,
-            'ratio': 1,
-        },
-    },
-}
-WEIGHT_CELL_CHANNEL = 'A'
-WEIGHT_CELL_GAIN = 128
-WEIGHT_CELL_QUEUE_LENGTH = 10
+# moved to recipes.models.Configuration
 
-WEIGHT_CELL_GLASS_DETECTION_VALUE = 10  # value for scale (unit depends on WEIGHT_CELL_DEFAULT)
-WEIGHT_CELL_GLASS_DETECTION_TIMEOUT = 10  # [s] abandon glass detection
-WEIGHT_CELL_SERVING_TIMEOUT = 10  # [s] anomaly while serving threshold
-DELAY_BEFORE_SERVING = 2  # [s] delay between glass detection and starting to serve
-DELAY_BETWEEN_SERVINGS = 1  # [s] delay between one pump activating and the next one
+# DELAYS and TIMEOUTS
+# moved to recipes.models.Configuration
 
 # Handling of units for mass and volume
 UNIT_DENSITY = 'g/L'
@@ -223,10 +189,9 @@ UNIT_MASS = 'g'
 FACTOR_VOLUME_TO_MASS = 10  # 1 cL is 10 g
 
 # states
-_SERVING_STATE_WAITING_MESSAGE = 'Press button to start' if USE_GREEN_BUTTON_TO_START_SERVING else 'Waiting for glass'
 SERVING_STATES_CHOICES = (
     (0, 'Init'),
-    (1, _SERVING_STATE_WAITING_MESSAGE),
+    (1, 'Press button or place glass to start'),
     (2, 'Serving'),
     (3, 'Finished'),
     (4, 'Abandon'),

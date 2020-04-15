@@ -1,8 +1,8 @@
 from django.views import View
 from django.http import JsonResponse
 from django.utils.log import logging
-from django.conf import settings
 
+from recipes.models import Configuration
 from hardware.serving import CocktailArtist
 
 logger = logging.getLogger('autobar')
@@ -14,7 +14,8 @@ class WhatIsArtistDoingView(View):
             return 'Ready to serve'
         else:
             if artist.current_order.status == 1:
-                if settings.USE_GREEN_BUTTON_TO_START_SERVING:
+                config = Configuration.get_solo()  # leverages cache, so no overload here
+                if config.ux_use_green_button_to_start_serving:
                     return 'Presse button to start'
                 else:
                     return 'Waiting for glass'
