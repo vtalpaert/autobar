@@ -10,11 +10,11 @@ A mechanical cocktail artist built with pumps inside an old coffee machine.
 
 The pumps are diaphragm pumps, which can lift both air and liquid. We fitted 10 of them inside an unsued coffee machine, each pump costs about 3,50€.
 
-The characteristics are 4W with 12V and less than 300 mA. It theoretically outputs 800 ml / min ± 100 ml. It can push up to 1,5m and pull from 1m.
+The characteristics are 4W with 12V and less than 300 mA. It theoretically outputs 800 ml / min ± 100 ml. It can push up to 1,5m and pull from 1m, so typically from a bottle on the ground (in a cooler) while the machine is on a table.
 
 ![pump showcase](media/docs/motor_fitted.jpg)
 
-In my first version, I used aquarium pumps which cannot lift air. The problem was that I needed to suck the air out of the tubes, plus carbonated drinks made bubbles inside the pump which broke stopped the pump ability to lift liquid. Furthermore the flow was too high, which prohibits fine volume measuring.
+In my first version, I used aquarium pumps which cannot lift air. The problem was that I needed to suck the air out of the tubes, plus carbonated drinks made bubbles inside the pump which broke the pump's ability to lift liquid. Furthermore the flow was too important, which prohibits fine volume measuring.
 
 The pumps are controlled from the Raspberry Pi's GPIO by thyristors. They work as controlled switches by connecting the gate to the GPIO without forgetting a pull-down 10kOhm resistor.
 
@@ -28,9 +28,9 @@ Touch screen and reusing the two original buttons. (more explanations to come)
 
 ## Software
 
-A Raspberry Pi runs a django server. I wanted a potentially complex database of cocktails, with tables such as Ingredients, Doses, history of Orders, etc. I display my website on the touchscreen, but you could use your smartphone to control your own barmachine.
+A Raspberry Pi runs a django server. I wanted a potentially complex database of cocktails, with tables such as Ingredients, Doses, history of Orders, etc. I display my website on the touchscreen, but you could use your smartphone to control your own barmachine. The main point is to use another device to configure the database, especially what is inside the Dispensers.
 
-For a smooth experience, I recommend using a Rapsberry Pi 3 at least. I encountered a lot of WiFi issues with my Pi 2. The Pi Zero is not suited to use with a touchscreen/desktop.
+For a smooth experience, I recommend using a Rapsberry Pi 3 at least. I encountered a lot of WiFi 2.4GHz issues with my Pi 2. The Pi Zero is not suited to use with a touchscreen/desktop.
 
 This is what the website looks like for now :
 

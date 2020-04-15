@@ -31,7 +31,6 @@ function display_order_state(response) {
         if (response['done']) {
             change_hardware_color("btn-secondary", "btn-success");
             setTimeout(function() {
-                console.log("close modal");
                 $('#modal').modal('hide')
               }, 2000);
         }
