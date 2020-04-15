@@ -50,7 +50,7 @@ class Mixes(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         config = Configuration.get_solo()
-        if config.show_only_verified_mixes:
+        if config.ux_show_only_verified_mixes:
             mixes = Mix.objects.filter(verified=True)
         else:
             mixes = Mix.objects.all()

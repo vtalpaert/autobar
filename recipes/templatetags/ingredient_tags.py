@@ -1,8 +1,10 @@
 from django.template.defaulttags import register
-from django.conf import settings
+
+from recipes.models import Configuration
 
 
 @register.inclusion_tag('recipes/ingredient_tags.html')
 def ingredient_tags(mix):
-    ingredients = mix.real_ingredients() if settings.UI_SHOW_ONLY_REAL_INGREDIENTS else mix.ingredients.all()
+    config = Configuration.get_solo()
+    ingredients = mix.real_ingredients() if config.ux_show_only_real_ingredients else mix.ingredients.all()
     return {'ingredients': ingredients}
