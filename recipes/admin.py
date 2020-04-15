@@ -59,7 +59,7 @@ class DoseAdmin(admin.ModelAdmin):
         'number',
         'required',
     )
-    search_fields = ('mix__name',)
+    search_fields = ('mix__name', 'ingredient__name')
     ordering = ('mix', 'number')
 
 

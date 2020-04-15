@@ -30,8 +30,11 @@ order_by = OrderedDict((
 ))
 filters = OrderedDict((  # TODO auto filters from available alcohol ?
     ('Alcohol', OrderedDict((
-        ('Gin', {'ingredients__name': 'Gin'}),
+        ('Gin', {'ingredients__name__in': ['Gin', 'Sloe gin']}),
         ('Vodka', {'ingredients__name': 'Vodka'}),
+        ('Tequila', {'ingredients__name': 'Tequila'}),
+        ('Rum', {'ingredients__name__in': ['Light rum', 'Dark rum']}),
+        ('Whiskey', {'ingredients__name': 'Whiskey'}),
     ))),
 ))
 
@@ -71,7 +74,8 @@ class Mixes(TemplateView):
                 subsort_by = subsorts[0]
             mixes_sorted = mixes.filter(**filters[sort_by][subsort_by])
 
-        mixes_sorted = Mix.filter_by_available(mixes=mixes_sorted)
+        if config.ux_show_only_available_mixes:
+            mixes_sorted = Mix.filter_by_available(mixes=mixes_sorted)
 
         context['sorts'] = sorts
         context['sort_by'] = sort_by
