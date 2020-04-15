@@ -11,6 +11,7 @@ try:
     from hardware.weight import WeightModule
 except RuntimeError:
     class WeightModule:
+        dummy = True
         def init_from_settings_and_config(self, settings, config):
             print('No WeightModule')
         def kill_current_task(self):

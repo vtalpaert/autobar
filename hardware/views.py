@@ -46,3 +46,20 @@ class EmergencyStopView(View):
         }
         artist.emergency_stop()
         return JsonResponse(response)
+
+class WeightMeasureView(View):
+    def get(self, request, *args, **kwargs):
+        artist = CocktailArtist.getInstance()
+        wm = artist.weight_module
+        if wm.dummy:
+            weight = raw = converted = '-1'
+        else:
+            weight = wm.make_constant_weight_measure()
+            raw = wm.get_value()
+            converted = wm.convert_value_to_weight(raw)
+        response = {
+            'weight': weight,
+            'raw_value': raw,
+            'converted_raw_value': converted
+        }
+        return JsonResponse(response)

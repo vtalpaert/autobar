@@ -226,6 +226,8 @@ class BackgroundTask(threading.Thread):
 
 
 class WeightModule(object):
+    dummy = False
+
     def __init__(self):
         self.background_task_lock = threading.Lock()
         self.thread = None
