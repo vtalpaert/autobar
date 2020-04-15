@@ -30,6 +30,10 @@ function display_order_state(response) {
         set_state_html(response['status_verbose']);
         if (response['done']) {
             change_hardware_color("btn-secondary", "btn-success");
+            setTimeout(function() {
+                console.log("close modal");
+                $('#modal').modal('hide')
+              }, 2000);
         }
     } else {
         set_state_html('Order was refused');

@@ -23,13 +23,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '8e7f2hb2p!ihm!u!&27mq+do-8ek!suao9=$%oywwu!!e6s8zd'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True  # when True, runserver serves the staticfiles
 
-ALLOWED_HOSTS = ['localhost', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '0.0.0.0']  # accept all incoming connections (from local network)
 
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -37,12 +36,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'solo',
-    'bootstrap',
+    'solo',  # config is unique
+    'bootstrap',  # add bootstrap to staticfiles
     'widget_tweaks',
     'bootstrap_modal_forms',
-    'recipes',
-    'hardware.apps.HardwareConfig',
+    'recipes',  # our models
+    'hardware.apps.HardwareConfig',  # register hardware as an app to catch post_save(Order)
 ]
 
 MIDDLEWARE = [
@@ -76,17 +75,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'autobar.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
-
 
 # Logging for Django
 LOGGING = {
@@ -130,7 +126,6 @@ LOGGING = {
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -151,36 +146,30 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
 
 LANGUAGE_CODE = 'en'
-
 TIME_ZONE = 'Europe/Paris'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
-
 STATIC_URL = '/static/'
 STATIC_ROOT = 'static'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'staticfiles'),
 )
-
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
-
 UPLOAD_FOR_MIX = 'mixes'
 
 
-# Settings for the bar configuration
+# Settings for UX behaviour
 INTERFACE_USE_DUMMY = True
 MARK_NOT_SERVING_DISPENSERS_AS_EMPTY = True  # if dispenser is suspected empty, mark as empty in db
 EMPTY_DISPENSER_MAKES_MIX_NOT_AVAILABLE = True
 UI_SHOW_ONLY_REAL_INGREDIENTS = False
+USE_GREEN_BUTTON_TO_START_SERVING = True  # if False, serving is triggered by sensing if glass is present
+SERVE_EVEN_IF_NO_GLASS_DETECTED = False  # continue if glass not detected
 
 # PINS in BCM numbering
 GPIO_PUMPS = [27, 22, 23, 24, 25, 5, 6, 12, 16, 26]
@@ -196,14 +185,12 @@ RED_BUTTON_BOUNCE_TIME = 10
 RED_BUTTON_HOLD_TIME = 5
 GREEN_BUTTON_LED_BLINK_TIME = 0.5  # [s] half period
 
-USE_GREEN_BUTTON_TO_START_SERVING = True  # if False, serving is triggered by sensing if glass is present
-
 # WEIGHT MODULE
 WEIGHT_CELL_DEFAULT = {
     'A': {
         128: {
-            'offset': -125596.5,
-            'ratio': -0.0003936631806248245,
+            'offset': 0,
+            'ratio': 1,
         },
         64: {
             'offset': 0,
@@ -223,23 +210,20 @@ WEIGHT_CELL_QUEUE_LENGTH = 10
 
 WEIGHT_CELL_GLASS_DETECTION_VALUE = 10  # value for scale (unit depends on WEIGHT_CELL_DEFAULT)
 WEIGHT_CELL_GLASS_DETECTION_TIMEOUT = 10  # [s] abandon glass detection
-SERVE_EVEN_IF_NO_GLASS_DETECTED = False  # continue if glass not detected
 WEIGHT_CELL_SERVING_TIMEOUT = 10  # [s] anomaly while serving threshold
 DELAY_BEFORE_SERVING = 2  # [s] delay between glass detection and starting to serve
 DELAY_BETWEEN_SERVINGS = 1  # [s] delay between one pump activating and the next one
 
-# Database settings and parameters
+# Handling of units for mass and volume
 UNIT_DENSITY = 'g/L'
 UNIT_DENSITY_DEFAULT = 1000  # default density for liquids in [UNIT_DENSITY]
 UNIT_VOLUME = 'cL'
 UNIT_VOLUME_VERBOSE = 'centiliter'
 UNIT_MASS = 'g'
-UNIT_CONVERSION_VOLUME_SI = 1e-2  # from UNIT_VOLUME to SI
-UNIT_MASS_TO_VOLUME = UNIT_DENSITY_DEFAULT / UNIT_CONVERSION_VOLUME_SI  # 1 cL is 10 g  # TODO this is wrong
+FACTOR_VOLUME_TO_MASS = 10  # 1 cL is 10 g
 
 # states
 _SERVING_STATE_WAITING_MESSAGE = 'Press button to start' if USE_GREEN_BUTTON_TO_START_SERVING else 'Waiting for glass'
-
 SERVING_STATES_CHOICES = (
     (0, 'Init'),
     (1, _SERVING_STATE_WAITING_MESSAGE),

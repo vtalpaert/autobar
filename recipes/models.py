@@ -142,7 +142,7 @@ class Mix(models.Model):
     @property
     def weight(self):
         q_and_d = self.doses.values_list('quantity', 'ingredient__density')
-        return sum(map(lambda qd: qd[0] * settings.UNIT_CONVERSION_VOLUME_SI * qd[1], q_and_d))
+        return sum(map(lambda qd: qd[0] * settings.FACTOR_VOLUME_TO_MASS * qd[1] / settings.UNIT_DENSITY_DEFAULT, q_and_d))
 
     def is_available(self):
         return all(ingredient.is_available() for ingredient in self.ingredients.all())
@@ -191,7 +191,7 @@ class Dose(models.Model):
 
     @property
     def weight(self):
-        return self.ingredient.density * (self.quantity * settings.UNIT_CONVERSION_VOLUME_SI)
+        return self.ingredient.density / settings.UNIT_DENSITY_DEFAULT * self.quantity * settings.FACTOR_VOLUME_TO_MASS
 
     def __str__(self):
         if self.ingredient.added_separately:

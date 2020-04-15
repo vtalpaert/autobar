@@ -1,6 +1,7 @@
 var switched_to_stop_button = false;
 function switch_to_stop_button(div_id) {
   $(div_id).prop('disabled', true);
+  $("#modal-close-button").prop('disabled', true);
   switched_to_stop_button = true;
   setTimeout(function() {
     $(div_id).removeClass("btn-primary");
