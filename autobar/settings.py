@@ -118,7 +118,7 @@ LOGGING = {
             'level': 'INFO',
         },
         'autobar': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG',
         },
     }

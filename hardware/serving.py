@@ -84,6 +84,23 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         logger.info('Shutdown called')
         subprocess.call(['shutdown', '-h', 'now'], shell=False)
 
+    def clean_pumps(self, start_at_pump=0):
+        nb_pumps = len(settings.GPIO_PUMPS)
+        if self.busy:
+            logger.info('Clean pumps command ignored because the Artist is busy')
+            return
+        if start_at_pump < nb_pumps and not self.weight_module.dummy:
+            logger.info('Will now clean pump %s' % start_at_pump)
+            self.busy = True
+            def end():
+                self.pumps.stop(start_at_pump)
+                self.busy = False
+                self.clean_pumps(start_at_pump=start_at_pump + 1)
+            self.pumps.start(start_at_pump)
+            self.weight_module.trigger_on_condition(stop, lambda weight: weight < -200, 60, stop)
+        else:
+            logger.info('Done cleaning pumps')
+
     def force_serve_state(self):
         # must not bounce
         if self.busy and self.current_order is not None:
@@ -119,7 +136,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.green_button_led.off()
         self.current_order.status = 3
         self.current_order.save()
-        #self.current_order = None  # forget about current order
+        self.current_order = None  # forget about current order
         self.busy = False  # ready to take on new orders
 
     def wait_for_glass(self):

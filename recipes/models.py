@@ -2,6 +2,7 @@ import os
 from math import ceil
 
 from django.db import models
+from django.db.utils import OperationalError
 import solo.models
 from django.utils.text import get_valid_filename
 
@@ -337,6 +338,8 @@ class Configuration(solo.models.SingletonModel):
     weight_module_delay_measure = models.FloatField(default=0.02,
         help_text="[s] length of time between two weight measures, try to keep it between 10 and 100Hz")
 
+    clean_pumps_now = models.BooleanField(default=False, help_text="Trigger cleaning the pumps now. Tips: lift the weight module to skip to next pump")
+
     class Meta:
         verbose_name = "Configuration"
 
@@ -346,6 +349,13 @@ class Configuration(solo.models.SingletonModel):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         # import here to avoid cross ref
-        from hardware.serving import CocktailArtist
-        artist = CocktailArtist.getInstance()
-        artist.reload_with_new_config(self)
+        try:
+            from hardware.serving import CocktailArtist
+            artist = CocktailArtist.getInstance()
+            artist.reload_with_new_config(self)
+            if self.clean_pumps_now:
+                artist.clean_pumps()
+                self.clean_pumps_now = False
+                self.save()
+        except OperationalError:
+            logger.error("Pass artist reload. This is normal during migrations")
