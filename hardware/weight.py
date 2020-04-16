@@ -54,7 +54,8 @@ class HX711(object):
     @channel.setter
     def channel(self, channel):
         if channel not in self._data:
-            raise ValueError('Channel %s has to be in %s.' % (channel, str(self._data.keys())))
+            print('Invalid channel %s, using A' % channel)
+            channel = 'A'
         # after changing channel or gain it has to wait 50 ms to allow adjustment.
         # the data before is garbage and cannot be used.
         self._channel = channel
