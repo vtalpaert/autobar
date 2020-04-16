@@ -94,5 +94,5 @@ crontab -e
 Then add
 
 ```bash
-@reboot sleep 60 && /home/pi/autobar/start.sh &
+@reboot sleep 10 && /home/pi/autobar/start.sh &
 ```

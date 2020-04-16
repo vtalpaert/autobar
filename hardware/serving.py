@@ -82,7 +82,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
 
     def shutdown(self):
         logger.info('Shutdown called')
-        subprocess.call(['shutdown', '-h', 'now'], shell=False)
+        subprocess.call(['sudo', 'shutdown', '-h', 'now'], shell=False)
 
     def clean_pumps(self, start_at_pump=0):
         nb_pumps = len(settings.GPIO_PUMPS)
