@@ -78,11 +78,15 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
 
     def on_red_button(self):
         logger.debug('Red button pressed')
-        self.shutdown()
+        self.close_browser()
 
     def shutdown(self):
         logger.info('Shutdown called')
         subprocess.call(['sudo', 'shutdown', '-h', 'now'], shell=False)
+
+    def close_browser(self):
+        logger.info('Close chromium browser')
+        subprocess.call(['killall', 'chromium-browser'], shell=False)
 
     def clean_pumps(self, start_at_pump=0):
         nb_pumps = len(settings.GPIO_PUMPS)

@@ -41,10 +41,10 @@ The database comes from an open source project (I lost the link, I'll find it ag
 
 ### Setup
 
-I used this to install a virtual keyboard for the touchscreen :
+I used this to install a virtual keyboard for the touchscreen, and simulate key press
 
 ```bash
-sudo apt install at-spi2-core florence
+sudo apt install at-spi2-core florence xdotool unclutter sed
 ```
 
 I added to the boot options
@@ -58,7 +58,7 @@ hdmi_mode=87
 hdmi_cvt 1024 600 60 6 0 0 0
 hdmi_drive=1
 
-display_rotate=1 #1: 90; 2: 180; 3: 270
+display_rotate=3 #1: 90; 2: 180; 3: 270
 ```
 
 And I rotated the touchscreen (see more [here](https://www.waveshare.com/wiki/Template:10.1inch_HDMI_LCD_(B)_Manual))
@@ -94,5 +94,5 @@ crontab -e
 Then add
 
 ```bash
-@reboot sleep 10 && /home/pi/autobar/start.sh &
+@reboot sleep 1 && /home/pi/autobar/start.sh &
 ```
