@@ -61,6 +61,8 @@ hdmi_drive=1
 display_rotate=1 #1: 90; 2: 180; 3: 270
 ```
 
+And I rotated the touchscreen (see more [here](https://www.waveshare.com/wiki/Template:10.1inch_HDMI_LCD_(B)_Manual))
+
 Use Python 3.5+ and install the dependencies from `requirements.txt`
 
 ### TODO
@@ -76,8 +78,21 @@ Use Python 3.5+ and install the dependencies from `requirements.txt`
 ## Quick run
 
 ```bash
-xvfb-run -s "-screen 0 1400x900x24" bash  # for when I used PyGame
-python manage.py runserver 0.0.0.0:8000
+python3 manage.py runserver 0.0.0.0:8000
 ```
 
-Yes I'm running Django in debug mode. As long as you run on your local network this will help your deployment.
+Yes that's Django in debug mode. Not safe to open anywhere else than your local network
+
+## Auto run
+
+We need to start the server and open from a browser on startup.
+
+```bash
+crontab -e
+```
+
+Then add
+
+```bash
+@reboot sleep 60 && /home/pi/autobar/start.sh &
+```

@@ -25,7 +25,7 @@ SECRET_KEY = '8e7f2hb2p!ihm!u!&27mq+do-8ek!suao9=$%oywwu!!e6s8zd'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # when True, runserver serves the staticfiles
 
-ALLOWED_HOSTS = ['localhost', '0.0.0.0']  # accept all incoming connections (from local network)
+ALLOWED_HOSTS = ['localhost', 'raspberrypi', 'autobar', '0.0.0.0']  # accept all incoming connections (from local network)
 
 
 # Application definition
