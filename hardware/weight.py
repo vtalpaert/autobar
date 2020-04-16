@@ -45,7 +45,8 @@ class HX711(object):
 
         GPIO.setup(self._pd_sck, GPIO.OUT)  # pin _pd_sck is output only
         GPIO.setup(self._dout, GPIO.IN)  # pin _dout is input only
-        self.channel, self.gain = channel, gain
+        self._channel, self._gain = channel, gain  # one to initialize
+        self.channel, self.gain = channel, gain  # one to raise errors properly
 
     @property
     def channel(self):
