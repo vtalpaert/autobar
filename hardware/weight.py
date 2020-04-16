@@ -72,6 +72,7 @@ class HX711(object):
             raise ValueError('Gain has to be in %s' % str(self._data[self._channel].keys()))
         # after changing channel or gain it has to wait 50 ms to allow adjustment.
         # the data before is garbage and cannot be used.
+        self._gain = gain
         self._read()
         time.sleep(0.5)
 
