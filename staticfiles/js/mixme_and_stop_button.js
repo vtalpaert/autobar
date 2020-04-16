@@ -39,8 +39,10 @@ function set_mixme_and_stop_button(div_id, mix_id, csrf_token, error_div_id) {
         },
         success: function(response){
           display_order_state(response);
-          switch_to_stop_button(div_id);
-          continuous_check_order(response['order_id'], 500);
+          if (response['accepted']) {
+            switch_to_stop_button(div_id);
+            continuous_check_order(response['order_id'], 500);
+          };
         },
         error: function(error) {
           console.log(error);

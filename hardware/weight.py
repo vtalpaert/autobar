@@ -241,7 +241,7 @@ class WeightModule(object):
             settings.GPIO_DT,
             settings.GPIO_SCK,
             gain=config.weight_cell_gain,
-            channel=settings.weight_cell_channel
+            channel=config.weight_cell_channel
         )
         self.delay_measure = config.weight_module_delay_measure
         self.queue = deque(maxlen=config.weight_module_queue_length)

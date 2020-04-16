@@ -117,7 +117,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
     def abandon_current_order(self):
         self.pumps.stop_all()
         self.green_button_led.off()
-        if self.current_order.status != 4:
+        if self.current_order is not None and self.current_order.status != 4:
             # pass this if already abandoned
             self.current_order.status = 4  # abandon
             self.current_order.save()  # triggers order_post_save but we won't do anything
@@ -224,7 +224,8 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
                 logger.debug('%s was accepted' % order)
                 return order.save()
             else:
-                logger.error('%s refused (was I busy?: %s, has mix: %s)' % (order, self.busy, order.mix is not None))
+                available = 'no mix' if order.mix is None else order.mix.is_available()
+                logger.error('%s refused (was I busy?: %s, is available?: %s)' % (order, self.busy, available))
                 if order.accepted:
                     order.accepted = False
                     return order.save()
