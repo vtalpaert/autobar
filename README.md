@@ -163,4 +163,5 @@ There is a lot of overkill in this project : the ingredient density, doing the m
 - add fixtures with verified mixes
 - manually add all mixes with most common alcohol
 - set volume to shot (big, small...)
-- script to verify mix with online info
+- script to manually verify mix while being prompted with online info
+- [use F in queries](https://docs.djangoproject.com/en/2.2/topics/db/queries/#filters-can-reference-fields-on-the-model)

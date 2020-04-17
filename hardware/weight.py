@@ -327,7 +327,7 @@ class WeightModule(object):
 
     def make_constant_weight_measure(self):
         self.queue.clear()
-        for _ in range(maxlen):
+        for _ in range(self.queue.maxlen):
             value = self.get_value()
         return self.convert_value_to_weight(value)
 

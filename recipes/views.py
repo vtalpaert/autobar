@@ -15,6 +15,8 @@ from .models import Mix, Order, Configuration
 logger = logging.getLogger('autobar')
 
 
+letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
 order_by = OrderedDict((
     ('A-Z', OrderedDict((
         ('A-Z', 'name'),
@@ -36,6 +38,7 @@ filters = OrderedDict((  # TODO auto filters from available alcohol ?
         ('Rum', {'ingredients__name__in': ['Light rum', 'Dark rum']}),
         ('Whiskey', {'ingredients__name': 'Whiskey'}),
     ))),
+    ('Name', OrderedDict([(letter, {'name__startswith': letter}) for letter in letters])),
 ))
 
 
