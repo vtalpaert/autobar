@@ -252,10 +252,10 @@ class WeightModule(object):
         self.ratio = config.weight_cell_ratio
 
     def interactive_settings(self):
-        gpio_dt = int(input("Enter GPIO DT:"))
-        gpio_sck = int(input("Enter GPIO SCK:"))
-        channel = input("Enter channel (A or B)")
-        gain = int(input("Enter gain (32, 64 or 128)"))
+        gpio_dt = int(input("Enter GPIO DT : "))
+        gpio_sck = int(input("Enter GPIO SCK : "))
+        channel = input("Enter channel (A or B) ")
+        gain = int(input("Enter gain (32, 64 or 128) "))
         maxlen = 100
         self.cell = HX711(gpio_dt, gpio_sck, gain=gain, channel=channel)
         self.delay_measure = 0.02
@@ -264,7 +264,7 @@ class WeightModule(object):
         self.ratio = 1
 
         # tare
-        input("Empty the scale and presse enter")
+        input("Empty the scale and press enter")
         print("Taring")
         if not self.cell.power_up():
             print("Cell could not power up")
@@ -275,7 +275,7 @@ class WeightModule(object):
         print("Offset will be", self.offset)
 
         # ratio
-        known = float(input("Put a known weight on scale, and enter here the weight in grams"))
+        known = float(input("Put a known weight on scale, and enter here the weight in grams : "))
         print("Wait")
         self.queue.clear()
         success = [self.get_value() is not None for _ in range(maxlen)]
@@ -303,12 +303,12 @@ class WeightModule(object):
                     print("This was the last test")
                 print("I will now timeout in 5 seconds")
                 self.trigger_on_condition(too_fast, lambda weight: False, 5, expected_timeout)
-            print("You have 10 seconds to put the weight back on")
-            self.trigger_on_condition(when_put_back_on, lambda weight: weight > 0.9 * known, 10, you_failed)
-        print("You have 10 seconds to remove the weight")
-        self.trigger_on_condition(when_removed, lambda weight: weight < 0.9 * known, 10, you_failed)
+            print("You have 15 seconds to put the weight back on")
+            self.trigger_on_condition(when_put_back_on, lambda weight: weight > 0.9 * known, 15, you_failed)
+        print("You have 15 seconds to remove the weight")
+        self.trigger_on_condition(when_removed, lambda weight: weight < 0.9 * known, 15, you_failed)
         print("Tests are running in background")
-        input("Enter to exit (but don't exit if tests are running")
+        input("Enter to exit (but don't exit if tests are running)\n")
 
     def get_value(self):
         if self.cell is None:
