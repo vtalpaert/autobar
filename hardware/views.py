@@ -58,7 +58,7 @@ class WeightMeasureView(View):
             weight = wm.make_constant_weight_measure()
             raw = wm.get_value()
             converted = wm.convert_value_to_weight(raw) if raw else None
-            queue = wm.queue
+            queue = list(wm.queue)
         response = {
             'weight': weight,
             'raw_value': raw,
