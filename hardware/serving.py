@@ -101,7 +101,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
                 self.busy = False
                 self.clean_pumps(start_at_pump=start_at_pump + 1)
             self.pumps.start(start_at_pump)
-            self.weight_module.trigger_on_condition(stop, lambda weight: weight < -200, 60, stop)
+            self.weight_module.trigger_on_condition(stop, lambda weight: weight < -50, 60, stop)
         else:
             logger.info('Done cleaning pumps')
 

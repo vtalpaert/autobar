@@ -327,7 +327,11 @@ class WeightModule(object):
         if value is None:
             return None
         else:
-            return self.ratio * (value - self.offset)
+            weight = self.ratio * (value - self.offset)
+            if -1000 < weight < 1000:
+                return weight
+            else:
+                return None
 
     def make_constant_weight_measure(self):
         self.queue.clear()

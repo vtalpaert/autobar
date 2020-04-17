@@ -17,10 +17,8 @@ class Plotter:
         self.raw = deque(maxlen=size)
         self.weight = deque(maxlen=size)
         style.use('fivethirtyeight')
-
         self.fig = plt.figure()
         self.ax1 = self.fig.add_subplot(1,1,1)
-
 
     def animate(self, i):
         with urllib.request.urlopen(self.url) as url:
@@ -30,6 +28,9 @@ class Plotter:
                 self.raw.append(data['converted_raw_value'])
                 self.weight.append(data['weight'])
             self.ax1.clear()
+            plt.title('Weight plotting')
+            plt.xlabel('timestamp [s]')
+            plt.ylabel('weight [g]')
             self.ax1.plot(self.ts, self.raw)
             self.ax1.plot(self.ts, self.weight)
 
