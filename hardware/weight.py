@@ -270,7 +270,8 @@ class WeightModule(object):
             print("Cell could not power up")
         success = [self.get_value() is not None for _ in range(maxlen)]
         print("Had", sum(success), "good readings on", maxlen)
-        self.offset = self.get_value()
+        while not self.offset:
+            self.offset = self.get_value()
         print("Offset will be", self.offset)
 
         # ratio
