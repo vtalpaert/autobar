@@ -206,11 +206,11 @@ class BackgroundTask(threading.Thread):
         self.deamon = True
         self.exit_event = threading.Event()
         self.lock = lock
-        self.condition = weakref.proxy(condition)
-        self.callback = weakref.proxy(callback)
+        self.condition = condition  # weakref.proxy(condition)
+        self.callback = callback  # weakref.proxy(callback)
         self.delay = delay
         self.timeout = timeout
-        self.on_timeout = weakref.proxy(on_timeout)
+        self.on_timeout = on_timeout  # weakref.proxy(on_timeout)
 
     def run(self):
         start = time.time()
