@@ -324,11 +324,16 @@ class WeightModule(object):
 
     def convert_value_to_weight(self, value):
         """Linear a*(x-b). Note parenthesis"""
-        return self.ratio * (value - self.offset)
+        if value is None:
+            return None
+        else:
+            return self.ratio * (value - self.offset)
 
     def make_constant_weight_measure(self):
         self.queue.clear()
-        for _ in range(self.queue.maxlen):
+        for _ in range(max(10, self.queue.maxlen)):
+            value = self.get_value()
+        while not value:
             value = self.get_value()
         return self.convert_value_to_weight(value)
 

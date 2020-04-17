@@ -53,13 +53,16 @@ class WeightMeasureView(View):
         wm = artist.weight_module
         if wm.dummy:
             weight = raw = converted = '-1'
+            queue = []
         else:
             weight = wm.make_constant_weight_measure()
             raw = wm.get_value()
-            converted = wm.convert_value_to_weight(raw)
+            converted = wm.convert_value_to_weight(raw) if raw else None
+            queue = wm.queue
         response = {
             'weight': weight,
             'raw_value': raw,
-            'converted_raw_value': converted
+            'converted_raw_value': converted,
+            'queue': queue,
         }
         return JsonResponse(response)

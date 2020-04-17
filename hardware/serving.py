@@ -48,7 +48,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             self.green_button_led.close()
 
     def reload_with_new_config(self, config=None):
-        logger.info('Cocktail artist reload config')
+        logger.info('Cocktail artist loads config')
         self.close()
         if config is None:
             config = Configuration.get_solo()
