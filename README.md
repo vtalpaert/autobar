@@ -26,7 +26,9 @@ Here is a close up, you can almost see the resistor we hid beneath the component
 
 ### Weight sensing
 
-We use a weight module typically used with Arduinos to sense how much liquid is poured. The HX711 analog to digital amplifier did not work with the `gpiozero` library, so I kept the classic `RPi.GPIO` with code from [here](https://circuitdigest.com/microcontroller-projects/arduino-weight-measurement-using-load-cell/).
+We include a weight module typically used with Arduino to sense how much liquid is poured. The HX711 analog to digital amplifier did not work with the `gpiozero` library, so I kept the classic `RPi.GPIO` with code from [here](https://circuitdigest.com/microcontroller-projects/arduino-weight-measurement-using-load-cell/). The HX711 is a capricious device because the protocol is fast paced, so the `gpiozero` lack of performance was eliminatory. In the file `hardware/weight.py`, we use multithreading to trigger a callback according to a weight condition.
+
+In previous autobar iterations, we found that timing based mixing was unreliable. Too many factors influence the quantity pumped over time : the level inside the bottle, the length and position of the tubes, bends in the tube, if liquid already fills the tube, etc... The current implementation raises a timeout if the weight condition is not fullfilled. Previously, I put off the timeout if the weight was varying (which would imply something is happening, versus an empty bottle), but I removed that since the code is already way too complicated as of now.
 
 ### Display and control
 
@@ -81,7 +83,7 @@ And I rotated the touch sensing (see more [here](https://www.waveshare.com/wiki/
 
 This project is Python 3.5+, dependencies are in `requirements.txt`. My Pi is dedicated to the bar so we used the system py3 environment.
 
-## Manual run
+### Manual run
 
 ```bash
 python3 manage.py runserver 0.0.0.0:8000
@@ -89,7 +91,7 @@ python3 manage.py runserver 0.0.0.0:8000
 
 Yes that's Django in debug mode. Not safe to use anywhere else than on your local network.
 
-## Startup run
+### Startup run
 
 We need to start the server on startup.
 
@@ -123,7 +125,37 @@ You can use `--kiosk` to hide most messages or `--start-fullscreen` which is les
 
 To exit the kiosk mode, I linked my red button (see `hardware.serving.CocktailArtist.on_red_button`) to kill chromium. I tried to simulate the F11 button with `xdotool` but `killall chromium-browser` just works.
 
-### TODO
+### Wiki
+
+The code separates the concepts of hardware interfacing and user interface. Since Django works in apps, we have on one hand the `recipes` app for the basic Django website, on the other hand the `hardware` app.
+
+Only the `recipes` app has models :
+
+![database visualisation](media/docs/database.png)
+
+There are two parts, the Configuration is a SingletonModel from our dependency `solo`. I wanted to be able to edit all user experience and parameters from the touchscreen instead of fetching my computer, log in SSH, edit the settings file, restart.
+
+Now for the nice parts, the cocktails. The behaviour we aimed for was to tell the autobar what ingredients we pump from, and for the machine to tell us what it can do from it. So I called `Dispenser`s the pumps in case someone uses another kind of hardware. It links to one of our known `Ingredient`s. `Mix` is the most important table, it stores all the cocktail information. `Dose` represents the composition of a mix, with a precise quantity of an ingredient in a specific order.
+Finally, the *Mix me!* button posts an `Order` creation. This way, I had the history of user interactions. The mix's `count` field is thus redundant, but now you can edit it at least.
+
+I tried using the Django forms to properly work with the Orders, but in the end I landed on Ajax for background calls. For example, to display the last Order progress, we spam GET requests to the server for an update. Not the best code, but works perfectly at our scale. The `hardware` app is connected to this database by capturing every `post_save` Order event. The singleton object `CocktailArtist` receives the order object everytime its save method is called. Seems like I really like singletons, but this was necessary to ensure GPIO pins are instanciated only once. The Singleton class is not mine. The life of an Order goes as follows :
+
+1. Order creation from a POST request
+1. the Artist catches the creation, and `accepted=True`s if it was not already busy and all ingredients are available. The Artist is now busy and saves the order, so it goes to post_save again
+1. Artist sees your order a second time, since it is accepted, it moves it to the *waiting* status. According to your parameters, it could mean waiting to detect the weight of a glass or the user pressing a start button. The Artist saves the order
+1. There it is again ! The post_save catches the order again. The Artist is still busy, but it does nothing with the Order
+1. At some point, another thread moves the Order to the next status : *serving*. It could be a button press, or a weight module trigger
+1. The Order at *serving* is caught by the Artist. According to the `doses_served`, we choose the next `Dose` to execute. If done, passes to *done*
+
+There is a lot of overkill in this project : the ingredient density, doing the median of weight values, ... (to complete has I code more unecessary things)
+
+## Other automatic cocktail machines
+
+(PR to be included)
+
+- (todo)
+
+## TODO
 
 - combine doses of same ingredient (look out for number field)
 - no 0.0 quantity for regular ingredients
