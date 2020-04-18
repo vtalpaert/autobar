@@ -198,6 +198,9 @@ class HX711(object):
         result = self._read()
         return result is not False
 
+    def cleanup(self):
+        GPIO.cleanup((self._dout, self._pd_sck))
+
 
 class BackgroundTask(threading.Thread):
     """TODO
@@ -369,6 +372,11 @@ class WeightModule(object):
     def kill_current_task(self):
         if self.thread is not None:
             self.thread.exit_event.set()
+
+    def close(self):
+        self.kill_current_task()
+        if self.cell is not None:
+            self.cell.cleanup()
 
 
 if __name__ == '__main__':

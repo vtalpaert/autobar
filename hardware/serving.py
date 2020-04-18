@@ -16,6 +16,8 @@ except RuntimeError:
             print('No WeightModule')
         def kill_current_task(self):
             print('Kill task called')
+        def close(self):
+            pass
 from hardware.pumps import Pumps
 
 from recipes.models import Configuration
@@ -37,7 +39,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.reload_with_new_config()
 
     def close(self):
-        self.weight_module.kill_current_task()
+        self.weight_module.close()
         if self.pumps is not None:
             self.pumps.close()
         if self.red_button is not None:
