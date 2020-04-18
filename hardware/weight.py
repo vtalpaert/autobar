@@ -9,7 +9,9 @@ import weakref
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 
+from django.conf import settings
 from recipes.models import Configuration
+
 
 class HX711(object):
     """
@@ -328,7 +330,7 @@ class WeightModule(object):
             return None
         else:
             weight = self.ratio * (value - self.offset)
-            if -1000 < weight < 1000:
+            if -settings.MAX_MEASURABLE_WEIGHT < weight < settings.MAX_MEASURABLE_WEIGHT:
                 return weight
             else:
                 return None

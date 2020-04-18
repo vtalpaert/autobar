@@ -177,6 +177,7 @@ GPIO_GREEN_BUTTON_LED = 13
 
 # WEIGHT MODULE
 # moved to recipes.models.Configuration
+MAX_MEASURABLE_WEIGHT = 1000  # [g]
 
 # DELAYS and TIMEOUTS
 # moved to recipes.models.Configuration
