@@ -29,6 +29,9 @@ function set_mixme_and_stop_button(div_id, mix_id, csrf_token, error_div_id) {
           success: function(response){
             $(div_id).prop('disabled', true);
             $(div_id).html('STOPPED');
+            setTimeout(function() {
+              $('#modal').modal('hide')
+            }, 2000); /* redundant with report hardware state */
           },
           error: function(error) {
             console.log(error);

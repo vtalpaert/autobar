@@ -55,7 +55,7 @@ This is what the website looks like for now :
 ![intro demo](media/docs/intro.png)
 ![modal demo](media/docs/modal.png)
 
-The database comes from an open source project (I lost the link, I'll find it again later). I ran into the issue of having way too many ingredients in the scraped DB, so I suggest combining several ingredients into one (like all the Schnapps, sorry).
+The database comes from an open source project (www.thecocktaildb.com). I ran into the issue of having way too many ingredients in the scraped DB, so I suggest combining several ingredients into one (like all the Schnapps, sorry).
 
 ### Setup
 

@@ -183,6 +183,10 @@ class Mix(models.Model):
                 available.append(mix)
         return available
 
+    def animation_uri(self):
+        """Return URL to media to play while serving"""
+        return "animation/1.mp4"
+
 
 class Dose(models.Model):
     mix = models.ForeignKey(Mix, on_delete=models.CASCADE)
