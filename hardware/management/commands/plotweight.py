@@ -38,7 +38,12 @@ class Plotter:
 class Command(BaseCommand):
     help = 'Plot the weight live'
 
+    def add_arguments(self, parser):
+        parser.add_argument('url', default='http://raspberrypi:8000', help='Site url such as http://raspberrypi:8000 or http://localhost:8000')
+        parser.add_argument('size', type=int, help='Number of values to remember')
+
     def handle(self, *args, **options):
-        p = Plotter('http://raspberrypi:8000/hardware/weightmeasure', 1000)
+        api_url = options['url'] + '/hardware/weightmeasure'
+        p = Plotter(api_url, options['size'])
         ani = animation.FuncAnimation(p.fig, p.animate, interval=10)  # interval in [ms]
         plt.show()

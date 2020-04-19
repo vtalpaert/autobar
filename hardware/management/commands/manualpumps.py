@@ -22,3 +22,4 @@ class Command(BaseCommand):
         finally:
             print('Stop all pumps')
             pumps.stop_all()
+            pumps.close()
