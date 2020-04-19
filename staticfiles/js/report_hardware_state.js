@@ -29,10 +29,14 @@ function display_order_state(response) {
     if (response['accepted']) {
         set_state_html(response['status_verbose']);
         if (response['done']) {
-            change_hardware_color("btn-secondary", "btn-success");
+            if (response['status'] == 3) {
+                change_hardware_color("btn-secondary", "btn-success");
+            } else {
+                change_hardware_color("btn-secondary", "btn-danger");
+            };
             setTimeout(function() {
                 $('#modal').modal('hide')
-              }, 2000);
+            }, 2000);
         }
     } else {
         set_state_html('Order was refused');

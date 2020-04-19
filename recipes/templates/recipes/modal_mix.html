@@ -14,6 +14,12 @@
 <div class="modal-body">
   <button id="hardware-state" type="button" class="btn btn-secondary btn-block" disabled>Choose your cocktail</button>
   <p></p>
+  <div class="embed-responsive embed-responsive-16by9">
+    <video id="animation" preload="none" width="0" loop poster="{{ MEDIA_URL }}{{ mix.image }}">
+      <source id="video-source" src="{{ MEDIA_URL }}animation/1.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="modal-content">
   <p>Ingredients:
   <ul class="navbar-nav mr-auto">
   {% for dose in mix.ordered_doses %}
@@ -30,6 +36,7 @@
   <p>Degree of alcohol {{ mix.alcohol_percentage }}%</p>
   {% endif %}
   <small class="text-muted">{{ mix.likes }} likes, served {{ mix.count }} times.</small>
+  </div>
 </div>
 
 <div class="modal-footer">

@@ -11,6 +11,11 @@ function switch_to_stop_button(div_id) {
   }, 2000);
 }
 
+function start_animation() {
+  var video = document.getElementById('animation');
+  video.play();
+}
+
 function set_mixme_and_stop_button(div_id, mix_id, csrf_token, error_div_id) {
   $(div_id).on('click', function(e){
     e.preventDefault();
@@ -41,6 +46,7 @@ function set_mixme_and_stop_button(div_id, mix_id, csrf_token, error_div_id) {
           display_order_state(response);
           if (response['accepted']) {
             switch_to_stop_button(div_id);
+            start_animation();
             continuous_check_order(response['order_id'], 500);
           };
         },

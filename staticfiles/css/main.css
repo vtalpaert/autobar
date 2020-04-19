@@ -79,3 +79,16 @@ body {
   line-height: .5;
   border-radius: .2rem;
 }
+
+/* https://stackoverflow.com/a/26078942/5033681 */
+.modal-dialog,
+.modal-content {
+    /* 80% of window height */
+    height: 94%;
+}
+
+.modal-body {
+    /* 100% = dialog height, 120px = header + footer */
+    max-height: calc(100% - 120px);
+    overflow-y: scroll;
+}
