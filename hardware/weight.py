@@ -342,7 +342,7 @@ class WeightModule(object):
         self.queue.clear()
         for _ in range(max(10, self.queue.maxlen)):
             value = self.get_value()
-        while not value:
+        while value is None:
             value = self.get_value()
         return self.convert_value_to_weight(value)
 
