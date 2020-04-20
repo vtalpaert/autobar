@@ -200,6 +200,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         stop_serving_when = lambda weight: ((weight - current_weight) > dose.weight)
         logger.debug('Current weight %sg, will stop when I reach %sg more' % (current_weight, dose.weight))
         def finished_dose():
+            logger.debug('Stopping pump %s' % dispenser.number)
             self.pumps.stop(dispenser.number)
             logger.debug('I finished %s for %s' % (dose, self.current_order))
             time.sleep(config.ux_delay_between_two_doses)
@@ -208,6 +209,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             self.current_order.doses_served += 1
             self.current_order.save()
         def timeout_serving():
+            logger.debug('Stopping pump %s' % dispenser.number)
             self.pumps.stop(dispenser.number)
             logger.info('Pump %i is not serving within %s seconds' % (dispenser.number, str(config.ux_timeout_serving)))
             if config.ux_mark_not_serving_dispensers_as_empty:
@@ -216,10 +218,12 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
                 dispenser.save()
             logger.debug('Timeout (%ss) serving for %s for %s, abandon' % (config.ux_timeout_serving, dose, self.current_order))
             self.abandon_current_order()
+        logger.debug('Starting pump %s' % dispenser.number)
         self.pumps.start(dispenser.number)
         if self.weight_module.trigger_on_condition(finished_dose, stop_serving_when, config.ux_timeout_serving, timeout_serving):
             logger.debug('Started serving %s using %s' % (dose, dispenser))
         else:
+            logger.debug('Stopping pump %s' % dispenser.number)
             self.pumps.stop(dispenser.number)
             logger.error('Could not start background task to serve %s for %s' % (dose, self.current_order))
             return self.abandon_current_order()
