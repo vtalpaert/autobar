@@ -10,7 +10,10 @@ import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 
 from django.conf import settings
+from django.utils.log import logging
 from recipes.models import Configuration
+
+logger = logging.getLogger('autobar')
 
 
 class HX711(object):
@@ -219,7 +222,10 @@ class BackgroundTask(threading.Thread):
 
     def run(self):
         start = time.time()
-        while not self.condition() and not self.exit_event.is_set():
+        while not self.condition():
+            if self.exit_event.is_set():
+                logger.debug('Exit event set while running')
+                return
             if time.time() - start > self.timeout:
                 print('timeout!')
                 # release before on_timeout
@@ -230,7 +236,9 @@ class BackgroundTask(threading.Thread):
         # release before callback, in case callback starts a new thread
         self.lock.release()
         if not self.exit_event.is_set():
+            logger.debug('Thread %s triggers callback' % id(self))
             self.callback()
+        logger.debug('Thread %s will now quit' % id(self))
 
 
 class WeightModule(object):
@@ -334,6 +342,7 @@ class WeightModule(object):
         else:
             weight = self.ratio * (value - self.offset)
             if -settings.MAX_MEASURABLE_WEIGHT < weight < settings.MAX_MEASURABLE_WEIGHT:
+                logger.debug('Abnormal weight %sg' % weight)
                 return weight
             else:
                 return None
@@ -342,9 +351,10 @@ class WeightModule(object):
         self.queue.clear()
         for _ in range(max(10, self.queue.maxlen)):
             value = self.get_value()
-        while value is None:
-            value = self.get_value()
-        return self.convert_value_to_weight(value)
+        weight = self.convert_value_to_weight(value)
+        while weight is None:
+            weight = self.convert_value_to_weight(self.get_value())
+        return weight
 
     def trigger_on_condition(self, callback, weight_condition, timeout, on_timeout):
         """Will frequently test condition and trigger callback when True
@@ -377,8 +387,3 @@ class WeightModule(object):
         self.kill_current_task()
         if self.cell is not None:
             self.cell.cleanup()
-
-
-if __name__ == '__main__':
-    module = WeightModule()
-    module.interactive_settings()
