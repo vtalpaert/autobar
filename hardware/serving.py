@@ -186,8 +186,8 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         def finished_dose():
             self.pumps.stop(dispenser.number)
             time.sleep(config.ux_delay_between_two_doses)
-            order.doses_served += 1
-            order.save()
+            self.current_order.doses_served += 1
+            self.current_order.save()
         def timeout_serving():
             self.pumps.stop(dispenser.number)
             logger.info('Pump %i is not serving within %s seconds' % (dispenser.number, str(config.ux_timeout_serving)))
@@ -209,12 +209,12 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.green_button_led.blink(
             on_time=config.button_blink_time_led_green,
             off_time=config.button_blink_time_led_green)
-        doses = order.mix.ordered_doses() if order.mix else []
-        if order.doses_served < len(doses):
+        doses = self.current_order.mix.ordered_doses() if self.current_order.mix else []
+        if self.current_order.doses_served < len(doses):
             # we have a new dose to serve
-            dose = doses[order.doses_served]
+            dose = doses[self.current_order.doses_served]
             self.serve_dose(dose)
-        elif order.doses_served == len(doses):
+        elif self.current_order.doses_served == len(doses):
             # all the doses were served
             self.move_current_order_to_finished()
 
