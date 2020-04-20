@@ -33,8 +33,19 @@ def make_place_for_dose(number, mix):
             dose.save()
 
 
+def ask_ingredient():
+    ingredient = None
+    while ingredient is None:
+        ingredient_name = input('Ingredient name ? ')
+        try:
+            ingredient = Ingredient.objects.get(name=ingredient_name)
+            return ingredient
+        except Ingredient.DoesNotExist:
+            print('Try again')
+
+
 def drink_dialog(mix, hints):
-    hints = hints[2:-2]
+    #hints = hints[2:-2]
     hints = hints.replace('\\\\n', '')
     hints = hints.replace('\\\\t', '')
     hints = hints.replace('Serve:', '\n\nServe:')
@@ -59,10 +70,13 @@ def drink_dialog(mix, hints):
         elif choice == 'p':
             return
         elif choice == 'd':
-            mix.delete()
-            return
+            if input('Are you sure? (y) ') == 'y':
+                mix.delete()
+                return
+            else:
+                return drink_dialog(mix, hints)
         elif choice == 'c':
-            choice = input('Do you want to change dosage or add ingredient or delete one? (d/i/delete) ')
+            choice = input('Do you want to change dosage, change ingredient, add ingredient or delete one? (d/c/a/delete) ')
             if choice == 'd':
                 number = int(input('What dosage number should be updated ? '))
                 quantity = float(input('What quantity do you want ? '))
@@ -73,16 +87,10 @@ def drink_dialog(mix, hints):
                 number = int(input('What dosage number do you want to delete ? '))
                 dose = Dose.objects.get(mix=mix, number=number)
                 dose.delete()
-            elif choice == 'i':
+            elif choice == 'a':
                 number = int(input('What dosage number should this ingredient have ? '))
                 quantity = float(input('What quantity do you want ? '))
-                ingredient = None
-                while ingredient is None:
-                    ingredient_name = input('Ingredient name ? ')
-                    try:
-                        ingredient = Ingredient.objects.get(name=ingredient_name)
-                    except Ingredient.DoesNotExist:
-                        print('Try again')
+                ingredient = ask_ingredient()
                 make_place_for_dose(number, mix)
                 Dose.objects.create(
                     ingredient=ingredient,
@@ -90,6 +98,12 @@ def drink_dialog(mix, hints):
                     number=number,
                     quantity=quantity
                 )
+            elif choice == 'c':
+                number = int(input('What dosage number should be updated ? '))
+                ingredient = ask_ingredient()
+                dose = Dose.objects.get(mix=mix, number=number)
+                dose.ingredient = ingredient
+                dose.save()
             return drink_dialog(mix, hints)
 
 
@@ -103,10 +117,11 @@ class Command(BaseCommand):
             json_text = open_page(json_url, pool_manager)
             drinks = demjson.decode(json_text, encoding="ascii")
             drink = drinks['drinks'][0]
-            drink_id = drink['idDrink']
-            description_url = get_description_by_id(drink_id)
-            drink_html = open_page(description_url, pool_manager)
-            lead = re.findall(r'<p class="lead">.*</p>', str(drink_html))
-            soup = BeautifulSoup(str(lead), features='html.parser', from_encoding='utf-8')
-            hints = soup.get_text()
+            hints = drink['strInstructions']
+            for i in range(16):
+                ingredient = 'strIngredient' + str(i)
+                measure = 'strMeasure' + str(i)
+                if ingredient in drink and measure in drink:
+                    if drink[ingredient] is not None:
+                        hints += '\nIngredient: {}, measure: {}'.format(drink[ingredient], drink[measure])
             drink_dialog(mix, hints)
