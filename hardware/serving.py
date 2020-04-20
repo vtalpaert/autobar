@@ -203,6 +203,8 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             self.pumps.stop(dispenser.number)
             logger.debug('I finished %s for %s' % (dose, self.current_order))
             time.sleep(config.ux_delay_between_two_doses)
+            new_weight = self.weight_module.make_constant_weight_measure()
+            logger.debug('I distributed %s grams when you asked for %s grams' % (new_weight - current_weight, dose.weight))
             self.current_order.doses_served += 1
             self.current_order.save()
         def timeout_serving():
@@ -231,7 +233,10 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if self.current_order.doses_served < len(doses):
             # we have a new dose to serve
             dose = doses[self.current_order.doses_served]
-            self.serve_dose(dose)
+            if dose.ingredient.added_separately:
+                logger.debug('You can add %s separately' % dose.ingredient)
+            else:
+                self.serve_dose(dose)
         elif self.current_order.doses_served == len(doses):
             # all the doses were served
             self.move_current_order_to_finished()

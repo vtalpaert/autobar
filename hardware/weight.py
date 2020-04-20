@@ -225,9 +225,11 @@ class BackgroundTask(threading.Thread):
         while not self.condition():
             if self.exit_event.is_set():
                 logger.debug('Exit event set while running')
+                self.lock.release()
                 return
             if time.time() - start > self.timeout:
                 print('timeout!')
+                logger.info('Timeout !')
                 # release before on_timeout
                 self.lock.release()
                 self.on_timeout()
