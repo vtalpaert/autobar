@@ -168,7 +168,8 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             return self.abandon_current_order()
 
     def get_available_dispenser(self, dose):
-        dispensers_query = dose.ingredient.dispensers(filter_out_empty=True)
+        config = Configuration.get_solo()
+        dispensers_query = dose.ingredient.dispensers(filter_out_empty=config.ux_empty_dispenser_makes_mix_not_available)
         if dispensers_query.exists():
             return dispensers_query[0]
         else:
