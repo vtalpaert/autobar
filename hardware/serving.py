@@ -125,6 +125,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
     def abandon_current_order(self):
         self.pumps.stop_all()
         self.green_button_led.off()
+        logger.info('Abandon current order %s' % self.current_order)
         if self.current_order is not None and self.current_order.status != 4:
             # pass this if already abandoned
             self.current_order.status = 4  # abandon
