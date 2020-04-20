@@ -40,6 +40,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.reload_with_new_config()
 
     def close(self):
+        logger.debug('Closing hardware interface')
         self.weight_module.close()
         if self.pumps is not None:
             self.pumps.close()
@@ -114,9 +115,14 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if self.busy and self.current_order is not None:
             if self.current_order.status == 1:
                 self.move_current_order_to_serving()
-            if self.current_order.status == 2:
-                logger.info('Cannot force already serving, abandon (TODO could pass)')
+            elif self.current_order.status == 2:
+                # could happen we green button used to interrupt
+                logger.info('Order %s was serving, interrupted' % self.current_order)
                 self.abandon_current_order()
+            else:
+                logger.error('We force the order %s to change state, but it does not make sense to do now' % self.current_order)
+        else:
+            logger.info('No order to pass to the next state')
 
     def emergency_stop(self):
         self.weight_module.kill_current_task()
@@ -139,14 +145,19 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         # this is executed in a separate thread, so sleep is not a problem
         config = Configuration.get_solo()
         time.sleep(config.ux_delay_before_start_serving)
+        logger.debug('I will now serve %s' % self.current_order)
         self.current_order.status = 2
         self.current_order.save()
 
     def move_current_order_to_finished(self):
         self.green_button_led.off()
-        self.current_order.status = 3
-        self.current_order.save()
-        self.current_order = None  # forget about current order
+        if self.current_order is None:
+            logger.error('No order to finish!')
+        else:
+            logger.debug('I have finished %s' % self.current_order)
+            self.current_order.status = 3
+            self.current_order.save()
+            self.current_order = None  # forget about current order
         self.busy = False  # ready to take on new orders
 
     def wait_for_glass(self):
@@ -190,6 +201,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         logger.debug('Current weight %sg, will stop when I reach %sg more' % (current_weight, dose.weight))
         def finished_dose():
             self.pumps.stop(dispenser.number)
+            logger.debug('I finished %s for %s' % (dose, self.current_order))
             time.sleep(config.ux_delay_between_two_doses)
             self.current_order.doses_served += 1
             self.current_order.save()
@@ -200,10 +212,11 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
                 logger.info('Mark %s as empty' % dispenser)
                 dispenser.is_empty = True
                 dispenser.save()
+            logger.debug('Timeout (%ss) serving for %s for %s, abandon' % (config.ux_timeout_serving, dose, self.current_order))
+            self.abandon_current_order()
         self.pumps.start(dispenser.number)
         if self.weight_module.trigger_on_condition(finished_dose, stop_serving_when, config.ux_timeout_serving, timeout_serving):
             logger.debug('Started serving %s using %s' % (dose, dispenser))
-            return
         else:
             self.pumps.stop(dispenser.number)
             logger.error('Could not start background task to serve %s for %s' % (dose, self.current_order))
