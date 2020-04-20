@@ -77,7 +77,8 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
 
     def on_green_button(self):
         logger.debug('Green button pressed')
-        self.force_serve_state()
+        if self.current_order is not None and self.current_order.status == 1:
+            self.force_serve_state()
 
     def on_red_button(self):
         logger.debug('Red button pressed')
