@@ -183,6 +183,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             return self.abandon_current_order()
         current_weight = self.weight_module.make_constant_weight_measure()
         stop_serving_when = lambda weight: weight - current_weight > dose.weight
+        logger.debug('Current weight %sg, will stop when I reach %sg more' % (current_weight, dose.weight))
         def finished_dose():
             self.pumps.stop(dispenser.number)
             time.sleep(config.ux_delay_between_two_doses)
