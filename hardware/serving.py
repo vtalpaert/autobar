@@ -239,6 +239,8 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             dose = doses[self.current_order.doses_served]
             if dose.ingredient.added_separately:
                 logger.debug('You can add %s separately' % dose.ingredient)
+                self.current_order.doses_served += 1
+                self.current_order.save()
             else:
                 self.serve_dose(dose)
         elif self.current_order.doses_served == len(doses):
