@@ -353,10 +353,10 @@ class WeightModule(object):
         """
         def apply_condition():
             value = self.get_value()
-            if value is None:
+            weight = self.convert_value_to_weight(value)
+            if weight is None:
                 return False  # do not trigger
             else:
-                weight = self.convert_value_to_weight(value)
                 return weight_condition(weight)
         self.thread = BackgroundTask(self.background_task_lock, apply_condition, callback, self.delay_measure, timeout, on_timeout)
         acquired = self.background_task_lock.acquire()
