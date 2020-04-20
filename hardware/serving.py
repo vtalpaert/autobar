@@ -115,6 +115,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             if self.current_order.status == 1:
                 self.move_current_order_to_serving()
             if self.current_order.status == 2:
+                logger.info('Cannot force already serving, abandon (TODO could pass)')
                 self.abandon_current_order()
 
     def emergency_stop(self):
