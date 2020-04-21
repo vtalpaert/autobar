@@ -385,7 +385,6 @@ class WeightModule(object):
     def kill_current_task(self):
         if self.thread is not None:
             self.thread.exit_event.set()
-            self.thread.join()  # TODO experimental
 
     def close(self):
         self.kill_current_task()
