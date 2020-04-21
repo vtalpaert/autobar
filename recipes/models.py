@@ -356,17 +356,15 @@ class Configuration(solo.models.SingletonModel):
         return 'Configuration'
 
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
         # import here to avoid cross ref
         try:
             from hardware.serving import CocktailArtist
             artist = CocktailArtist.getInstance()
-            if 'no_reload_artist' not in kwargs or not kwargs['no_reload_artist']:
-                artist.reload_with_new_config(self)
+            artist.reload_with_new_config(self)  # we provide self/config since we have not saved yet
             if self.clean_pumps_now:
                 logger.info("Asking artist to clean pumps")
                 artist.clean_pumps()
                 self.clean_pumps_now = False
-                self.save(no_reload_artist=True)
         except OperationalError:
             logger.error("Pass artist reload. This is normal during migrations")
+        super().save(*args, **kwargs)
