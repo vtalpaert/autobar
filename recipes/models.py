@@ -187,7 +187,7 @@ class Mix(models.Model):
 
     def animation_uri(self):
         """Return URL to the media to play while serving"""
-        return get_animation_for_mix(mix)
+        return get_animation_for_mix(self)
 
 
 class Dose(models.Model):
