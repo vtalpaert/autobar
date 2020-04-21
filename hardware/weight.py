@@ -344,7 +344,7 @@ class WeightModule(object):
         else:
             weight = self.ratio * (value - self.offset)
             if -settings.MAX_MEASURABLE_WEIGHT < weight < settings.MAX_MEASURABLE_WEIGHT:
-                logger.debug('Accepted weight %s' % weight)
+                #logger.debug('Accepted weight %s' % weight)
                 return weight
             else:
                 logger.debug('Abnormal weight %s grams' % weight)
