@@ -150,8 +150,6 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
     def move_current_order_to_serving(self):
         # no verification on status, do it outside this method
         # this is executed in a separate thread, so sleep is not a problem
-        time.sleep(self.config.ux_delay_before_start_serving)
-        logger.debug('I will now serve %s' % self.current_order)
         self.current_order.status = 2
         self.current_order.save()
 
@@ -215,7 +213,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             logger.debug('Stopping pump %s' % dispenser.number)
             self.pumps.stop(dispenser.number)
             logger.info('Pump %i is not serving within %s seconds' % (dispenser.number, str(self.config.ux_timeout_serving)))
-            if self.config.ux_mark_not_serving_dispensers_as_empty:
+            if self.config.ux_mark_not_serving_dispensers_as_empty and not dispenser.is_empty:
                 logger.info('Mark %s as empty' % dispenser)
                 dispenser.is_empty = True
                 dispenser.save()
@@ -236,6 +234,10 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             on_time=self.config.button_blink_time_led_green,
             off_time=self.config.button_blink_time_led_green)
         doses = self.current_order.mix.ordered_doses() if self.current_order.mix else []
+        if self.current_order.doses_served == 0:
+            # first time
+            logger.debug('I will now serve %s' % self.current_order)
+            time.sleep(self.config.ux_delay_before_start_serving)
         if self.current_order.doses_served < len(doses):
             # we have a new dose to serve
             dose = doses[self.current_order.doses_served]
