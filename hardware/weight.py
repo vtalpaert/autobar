@@ -226,7 +226,7 @@ class BackgroundTask(threading.Thread):
             if self.exit_event.is_set():
                 logger.debug('Exit event set while running')
                 self.lock.release()
-                return
+                return  # exit
             if time.time() - start > self.timeout:
                 print('timeout!')
                 logger.info('Timeout !')
@@ -240,7 +240,7 @@ class BackgroundTask(threading.Thread):
         if not self.exit_event.is_set():
             logger.debug('Thread %s triggers callback' % id(self))
             self.callback()
-        logger.debug('Thread %s will now quit' % id(self))
+        logger.debug('Thread %s died' % id(self))
 
 
 class WeightModule(object):
@@ -385,6 +385,7 @@ class WeightModule(object):
     def kill_current_task(self):
         if self.thread is not None:
             self.thread.exit_event.set()
+            self.thread.join()  # TODO experimental
 
     def close(self):
         self.kill_current_task()

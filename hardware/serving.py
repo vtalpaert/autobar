@@ -30,6 +30,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
     def __init__(self):
         print('Artist id', id(self))  # unique
 
+        self._config = None  # holder
         self.busy = False  # ready to take orders
         self.current_order = None  # not mixing anything
         self.weight_module = WeightModule()
@@ -51,11 +52,17 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if self.green_button_led is not None:
             self.green_button_led.close()
 
+    @property
+    def config(self):
+        if self._config is None:
+            logger.debug('Cocktail artist loads config')
+            self._config = Configuration.get_solo()  # even if this is in cache, will keep pointer to it
+        return self._config
+
     def reload_with_new_config(self, config=None):
-        logger.info('Cocktail artist loads config')
         self.close()
-        if config is None:
-            config = Configuration.get_solo()
+        self._config = config  # if None, self.config will load a new one
+        config = self.config
 
         self.weight_module.init_from_settings_and_config(settings, config)
 
@@ -78,8 +85,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
 
     def on_green_button(self):
         logger.debug('Green button pressed')
-        if self.current_order is not None and self.current_order.status == 1:
-            self.force_serve_state()
+        self.start_stop_serving()
 
     def on_red_button(self):
         logger.debug('Red button pressed')
@@ -110,7 +116,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         else:
             logger.info('Done cleaning pumps')
 
-    def force_serve_state(self):
+    def start_stop_serving(self):
         # must not bounce
         if self.busy and self.current_order is not None:
             if self.current_order.status == 1:
@@ -125,11 +131,11 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             logger.info('No order to pass to the next state')
 
     def emergency_stop(self):
-        self.weight_module.kill_current_task()
         self.abandon_current_order()
         logger.info('Emergency stop!')
 
     def abandon_current_order(self):
+        self.weight_module.kill_current_task()  # prevents any callback from happening
         self.pumps.stop_all()
         self.green_button_led.off()
         logger.info('Abandon current order %s' % self.current_order)
@@ -143,8 +149,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
     def move_current_order_to_serving(self):
         # no verification on status, do it outside this method
         # this is executed in a separate thread, so sleep is not a problem
-        config = Configuration.get_solo()
-        time.sleep(config.ux_delay_before_start_serving)
+        time.sleep(self.config.ux_delay_before_start_serving)
         logger.debug('I will now serve %s' % self.current_order)
         self.current_order.status = 2
         self.current_order.save()
@@ -161,10 +166,9 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         self.busy = False  # ready to take on new orders
 
     def wait_for_glass(self):
-        config = Configuration.get_solo()
-        pass_this_step_condition = lambda weight: weight > config.ux_glass_detection_value
+        pass_this_step_condition = lambda weight: weight > self.config.ux_glass_detection_value
         def glass_timeout():
-            if config.ux_serve_even_if_no_glass_detected:
+            if self.config.ux_serve_even_if_no_glass_detected:
                 self.move_current_order_to_serving()
             else:
                 logger.info('Time out while waiting for glass for %s' % self.current_order)
@@ -172,7 +176,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if self.weight_module.trigger_on_condition(
             self.move_current_order_to_serving,
             pass_this_step_condition,
-            config.ux_timeout_glass_detection,
+            self.config.ux_timeout_glass_detection,
             glass_timeout
         ):
             logger.debug('Will move %s to serving when glass is detected' % self.current_order)
@@ -182,15 +186,13 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             return self.abandon_current_order()
 
     def get_available_dispenser(self, dose):
-        config = Configuration.get_solo()
-        dispensers_query = dose.ingredient.dispensers(filter_out_empty=config.ux_empty_dispenser_makes_mix_not_available)
+        dispensers_query = dose.ingredient.dispensers(filter_out_empty=self.config.ux_empty_dispenser_makes_mix_not_available)
         if dispensers_query.exists():
             return dispensers_query[0]
         else:
             return None
 
     def serve_dose(self, dose):
-        config = Configuration.get_solo()
         dispenser = self.get_available_dispenser(dose)
         if dispenser is None:
             # can't serve
@@ -203,7 +205,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             logger.debug('Stopping pump %s' % dispenser.number)
             self.pumps.stop(dispenser.number)
             logger.debug('I finished %s for %s' % (dose, self.current_order))
-            time.sleep(config.ux_delay_between_two_doses)
+            time.sleep(self.config.ux_delay_between_two_doses)
             new_weight = self.weight_module.make_constant_weight_measure()
             logger.debug('I distributed %s grams when you asked for %s grams' % (new_weight - current_weight, dose.weight))
             self.current_order.doses_served += 1
@@ -211,16 +213,16 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         def timeout_serving():
             logger.debug('Stopping pump %s' % dispenser.number)
             self.pumps.stop(dispenser.number)
-            logger.info('Pump %i is not serving within %s seconds' % (dispenser.number, str(config.ux_timeout_serving)))
-            if config.ux_mark_not_serving_dispensers_as_empty:
+            logger.info('Pump %i is not serving within %s seconds' % (dispenser.number, str(self.config.ux_timeout_serving)))
+            if self.config.ux_mark_not_serving_dispensers_as_empty:
                 logger.info('Mark %s as empty' % dispenser)
                 dispenser.is_empty = True
                 dispenser.save()
-            logger.debug('Timeout (%ss) serving for %s for %s, abandon' % (config.ux_timeout_serving, dose, self.current_order))
+            logger.debug('Timeout (%ss) serving for %s for %s, abandon' % (self.config.ux_timeout_serving, dose, self.current_order))
             self.abandon_current_order()
         logger.debug('Starting pump %s' % dispenser.number)
         self.pumps.start(dispenser.number)
-        if self.weight_module.trigger_on_condition(finished_dose, stop_serving_when, config.ux_timeout_serving, timeout_serving):
+        if self.weight_module.trigger_on_condition(finished_dose, stop_serving_when, self.config.ux_timeout_serving, timeout_serving):
             logger.debug('Started serving %s using %s' % (dose, dispenser))
         else:
             logger.debug('Stopping pump %s' % dispenser.number)
@@ -229,10 +231,9 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             return self.abandon_current_order()
 
     def serve(self):
-        config = Configuration.get_solo()
         self.green_button_led.blink(
-            on_time=config.button_blink_time_led_green,
-            off_time=config.button_blink_time_led_green)
+            on_time=self.config.button_blink_time_led_green,
+            off_time=self.config.button_blink_time_led_green)
         doses = self.current_order.mix.ordered_doses() if self.current_order.mix else []
         if self.current_order.doses_served < len(doses):
             # we have a new dose to serve
@@ -270,8 +271,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if order.accepted and self.current_order == order and self.busy:
             # current accepted order is processed here
             if order.status == 1:
-                config = Configuration.get_solo()
-                if config.ux_use_green_button_to_start_serving:
+                if self.config.ux_use_green_button_to_start_serving:
                     pass  # nothing to do, button press will trigger next state
                 else:
                     self.wait_for_glass()
