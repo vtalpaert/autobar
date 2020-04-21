@@ -9,6 +9,8 @@ from django.utils.text import get_valid_filename
 from django.conf import settings
 DISPENSER_CHOICES = [(i, i) for i in range(len(settings.GPIO_PUMPS))]
 
+from recipes.animation import get_animation_for_mix
+
 
 def _cut(value, low=None, high=None):
     if low:
@@ -184,8 +186,8 @@ class Mix(models.Model):
         return available
 
     def animation_uri(self):
-        """Return URL to media to play while serving"""
-        return "animation/1.mp4"
+        """Return URL to the media to play while serving"""
+        return get_animation_for_mix(mix)
 
 
 class Dose(models.Model):
