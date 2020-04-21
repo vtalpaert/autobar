@@ -118,7 +118,7 @@ nano /home/pi/.config/lxsession/LXDE-pi/autostart
 @xset -dpms
 @xset s noblank
 # disable mouse with unclutter (TODO: copy from current file)
-@chromium-browser --window-size=1024,600 --incognito --kiosk http://localhost:8000/  # full screen mode
+#@chromium-browser --window-size=1024,600 --incognito --kiosk http://localhost:8000/  # full screen mode
 ```
 
 You can use `--kiosk` to hide most messages or `--start-fullscreen` which is less restrictive on its messages to the user.
