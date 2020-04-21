@@ -358,10 +358,12 @@ class Configuration(solo.models.SingletonModel):
         try:
             from hardware.serving import CocktailArtist
             artist = CocktailArtist.getInstance()
-            artist.reload_with_new_config(self)
+            if 'no_reload_artist' not in kwargs or not kwargs['no_reload_artist']:
+                artist.reload_with_new_config(self)
             if self.clean_pumps_now:
+                logger.info("Asking artist to clean pumps")
                 artist.clean_pumps()
                 self.clean_pumps_now = False
-                self.save()
+                self.save(no_reload_artist=True)
         except OperationalError:
             logger.error("Pass artist reload. This is normal during migrations")
