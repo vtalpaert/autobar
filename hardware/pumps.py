@@ -46,13 +46,13 @@ class Pumps:
             acquired = self._one_pump_at_a_time.acquire()
             if acquired:
                 self._started_pump = pump_id
-                logger.debug('Pump %i is now the only one started' % pump_id)
+                self.pumps[pump_id].on()
+                logger.debug('Pump %i is now the only one started (%s)' % (pump_id, self.pumps[pump_id].is_active))
             else:
                 logger.error('Will not start pump %i because pump %s is already running' % (pump_id, self._started_pump))
-                return
         else:
-            logger.debug('Pump %i on' % pump_id)
-        self.pumps[pump_id].on()
+            self.pumps[pump_id].on()
+            logger.debug('Pump %i on (%s)' % (pump_id, self.pumps[pump_id].on()))
 
     def close(self):
         logger.debug('Close pumps GPIO interface')
