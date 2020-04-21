@@ -1,6 +1,7 @@
 import os
 from math import ceil
 
+from django.utils.log import logging
 from django.db import models
 from django.db.utils import OperationalError
 import solo.models
@@ -10,6 +11,8 @@ from django.conf import settings
 DISPENSER_CHOICES = [(i, i) for i in range(len(settings.GPIO_PUMPS))]
 
 from recipes.animation import get_animation_for_mix
+
+logger = logging.getLogger('autobar')
 
 
 def _cut(value, low=None, high=None):
