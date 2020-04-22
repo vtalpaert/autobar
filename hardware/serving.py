@@ -276,7 +276,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             if order.status == 1:
                 if self.config.ux_use_green_button_to_start_serving:
                     pass  # nothing to do, button press will trigger next state
-                    if self.green_button.when_held is None:
+                    if self.green_button is None or self.green_button.when_held is None:
                         logger.error('Nothing will happen, green button does nothing')
                     else:
                         logger.debug('Waiting for green button to start %s' % self.green_button.when_held)
