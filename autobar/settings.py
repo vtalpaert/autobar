@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'bootstrap_modal_forms',
     'recipes',  # our models
-    'hardware.apps.HardwareConfig',  # register hardware as an app to catch post_save(Order)
     #'django_extensions',  # for graph_models
 ]
 

@@ -12,7 +12,7 @@
 </div>
 
 <div class="modal-body">
-  <button id="hardware-state" type="button" class="btn btn-secondary btn-block" disabled>Choose your cocktail</button>
+  <button id="info-bubble" type="button" class="btn btn-secondary btn-block" disabled>Choose your cocktail</button>
   <p></p>
   <div class="embed-responsive embed-responsive-16by9">
     <video id="animation" preload="none" width="0" loop poster="{{ MEDIA_URL }}{{ mix.image }}">
@@ -58,7 +58,6 @@
     switched_to_stop_button = false; // keep this for working go and stop button
     set_mixme_and_stop_button("#submitme", "{{ mix.id }}", "{{ csrf_token }}", "#modal");
 
-    show_hardware_state(); // from report_hardware_state.js
   </script>
 
 </div>

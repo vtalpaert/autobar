@@ -1,5 +1,6 @@
 import subprocess
 import time
+import threading
 
 from django.utils.log import logging
 from django.conf import settings
@@ -15,42 +16,213 @@ except RuntimeError:
         dummy = True
         def init_from_settings_and_config(self, settings, config):
             print('No WeightModule')
-        def kill_current_task(self):
-            print('Kill task called')
+        def make_constant_weight_measure(self, *args, **kwargs):
+            return 100
         def close(self):
             pass
 from hardware.pumps import Pumps
 
-from recipes.models import Configuration
+from recipes.models import Configuration, Dispenser
 
 logger = logging.getLogger('autobar')
+
+
+class ServeOrderThread(threading.Thread):
+    def __init__(self, order, artist):
+        super().__init__()
+        self.deamon = True
+        self.exit_event = threading.Event()
+        self.order = order
+        self.config = artist.config
+        self.artist = artist
+        self.green_button = None
+        self.green_button_led = None
+
+    def init_gpio(self):
+        pin_factory = MockFactory() if self.config.hardware_use_dummy else None
+        self.green_button = Button(
+            pin=settings.GPIO_GREEN_BUTTON,
+            bounce_time=self.config.button_bounce_time_green,
+            hold_time=self.config.button_hold_time_green,
+            pin_factory=pin_factory)
+        self.green_button_led = LED(pin=settings.GPIO_GREEN_BUTTON_LED, pin_factory=pin_factory)
+
+    def close_gpio(self):
+        if self.green_button is not None:
+            self.green_button.close()
+        if self.green_button_led is not None:
+            self.green_button_led.close()
+
+    def abandon_order(self):
+        logger.info('Abandon %s' % self.order)
+        self.order.status = 4
+        self.order.save()
+
+    def wait_to_start(self):
+        logger.debug('Waiting to start %s' % self.order)
+        self.green_button_led.on()
+        self.order.status = 1
+        self.order.save()
+
+        # this cannot be None, because no max_try is provided
+        start_weight = self.artist.weight_module.make_constant_weight_measure()
+        logger.debug('Current weight %sg, must reach %sg more for glass detection' % (start_weight, self.config.ux_glass_detection_value))
+
+        start = time.time()
+        while True:
+            if self.exit_event.is_set():
+                logger.debug('Exit thread while waiting to start')
+                self.green_button_led.off()
+                return False
+
+            if self.config.ux_use_green_button_to_start_serving:
+                # button triggers the start
+                if self.green_button.is_active:
+                    logger.debug('Green button pressed, start serving %s' % self.order)
+                    return True
+                time.sleep(0.01)  # some delay ? TODO
+            else:
+                # glass weight triggers the start
+
+                # this call contains a (while weight is None) but for max_try only
+                # if weight is None we will come back here later thanks to the while True loop
+                weight = self.artist.weight_module.make_constant_weight_measure(clear=False, max_try=10)
+
+                if weight is not None and weight - start_weight > self.config.ux_glass_detection_value:
+                    # glass detected
+                    logger.debug('Detected a weight above the ux_glass_detection_value (%sg)' % self.config.ux_glass_detection_value)
+                    return True
+
+            if time.time() - start > self.config.ux_timeout_glass_detection:  # TODO rename field
+                # timeout
+                logger.debug('Timeout (%ss) while waiting to start %s' % (self.config.ux_timeout_glass_detection, self.order))
+                if self.config.ux_serve_even_if_no_glass_detected:
+                    logger.info('No trigger to start serving, but I will do it anyway because ux_serve_even_if_no_glass_detected is True')
+                    return True
+                self.green_button_led.off()
+                return False
+
+    def serve_dose(self, dose):
+        if dose.ingredient.added_separately:
+            logger.debug('You can add %s separately' % dose.ingredient)
+            self.order.doses_served += 1
+            self.order.save()
+            return True
+        dispenser = Dispenser.get_available_dispenser(dose)
+        if dispenser is None:
+            # no dispenser, that should not happen since we checked is_available
+            # but let's imagine two doses share the same ingredient which became empty in the meantime
+            logger.error('No available dispenser providing %s. Stopping cocktail' % dose.ingredient)
+            return False
+
+        # this cannot be None, because no max_try is provided
+        start_weight = self.artist.weight_module.make_constant_weight_measure()
+        logger.debug('Current weight %sg, will stop when I reach %sg more' % (start_weight, dose.weight))
+
+        logger.debug('Starting pump %s' % dispenser.number)
+        if not self.artist.pumps.start(dispenser.number):
+            # it did not start, Pumps logs by itself the problem
+            return False
+
+        logger.debug('Start serving %s using %s' % (dose, dispenser))
+        start = time.time()
+        while True:  # main loop
+            if self.exit_event.is_set():
+                # exit called
+                logger.debug('Exit thread while serving %s for %s' % (dose, self.order))
+                logger.debug('Stopping pump %s' % dispenser.number)
+                self.artist.pumps.stop(dispenser.number)
+                return False
+
+            # this call contains a (while weight is None) but for max_try only
+            # if weight is None we will come back here later thanks to the while True loop
+            weight = self.artist.weight_module.make_constant_weight_measure(clear=False, max_try=10)
+
+            if weight is not None and weight - start_weight > dose.weight:
+                # weight reached
+                logger.debug('I finished %s for %s' % (dose, self.order))
+                logger.debug('Stopping pump %s' % dispenser.number)
+                self.artist.pumps.stop(dispenser.number)
+                time.sleep(self.config.ux_delay_between_two_doses)
+                end_weight = self.artist.weight_module.make_constant_weight_measure()
+                logger.debug('I distributed %i grams when you asked for %i grams' % (end_weight - start_weight, dose.weight))
+                self.order.doses_served += 1
+                self.order.save()
+                return True
+
+            if time.time() - start > self.config.ux_timeout_serving:
+                # timeout
+                logger.debug('Timeout (%ss) while serving %s for %s using pump %i' % (self.config.ux_timeout_serving, dose, self.order, dispenser.number))
+                logger.debug('Stopping pump %s' % dispenser.number)
+                self.artist.pumps.stop(dispenser.number)
+                if self.config.ux_mark_not_serving_dispensers_as_empty and not dispenser.is_empty:
+                    logger.info('Mark %s as empty' % dispenser)
+                    dispenser.is_empty = True
+                    dispenser.save()
+                return False
+
+            if self.green_button.is_active:
+                # button interruption
+                logger.debug('Button interrupt while serving %s for %s using pump %i' % (dose, self.order))
+                logger.debug('Stopping pump %s' % dispenser.number)
+                self.artist.pumps.stop(dispenser.number)
+                return False
+
+    def serve_order(self):
+        logger.debug('I am starting %s' % order)
+        self.green_button_led.blink(
+            on_time=self.config.button_blink_time_led_green,
+            off_time=self.config.button_blink_time_led_green)
+        time.sleep(self.config.ux_delay_before_start_serving)
+        doses = self.order.mix.ordered_doses()  # we already verified order.mix is True in accept_new_order
+        self.order.status = 2
+        self.order.save()
+        for dose in doses:
+            if not self.serve_dose(dose, order):
+                self.green_button_led.off()
+                return False
+        self.green_button_led.off()
+        return True
+
+    def finish_order(self):
+        logger.info('Finished %s' % self.order)
+        self.order.status = 3
+        self.order.save()
+
+    def run(self):
+        try:
+            self.init_gpio()
+            if self.wait_to_start():
+                if self.serve_order():
+                    self.finish_order(order)
+                else:
+                    self.abandon_order()
+            else:
+                self.abandon_order()
+        finally:
+            self.close_gpio()
+            self.artist.busy = False  # tell artist we are done
 
 
 class CocktailArtist(Singleton):  # inherits Singleton, there can only be one artist at a time
     def __init__(self):
         print('Artist id', id(self))  # unique
-
         self._config = None  # holder
+        self.thread = None
         self.busy = False  # ready to take orders
-        self.current_order = None  # not mixing anything
         self.weight_module = WeightModule()
         self.pumps = None
         self.red_button = None
-        self.green_button = None
-        self.green_button_led = None
         self.reload_with_new_config()
 
     def close(self):
         logger.debug('Closing hardware interface')
+        self.stop_thread()
         self.weight_module.close()
         if self.pumps is not None:
             self.pumps.close()
         if self.red_button is not None:
             self.red_button.close()
-        if self.green_button is not None:
-            self.green_button.close()
-        if self.green_button_led is not None:
-            self.green_button_led.close()
 
     @property
     def config(self):
@@ -75,17 +247,6 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
             hold_time=config.button_hold_time_red,
             pin_factory=pin_factory)
         self.red_button.when_held = self.on_red_button
-        self.green_button = Button(
-            pin=settings.GPIO_GREEN_BUTTON,
-            bounce_time=config.button_bounce_time_green,
-            hold_time=config.button_hold_time_green,
-            pin_factory=pin_factory)
-        self.green_button.when_held = self.on_green_button
-        self.green_button_led = LED(pin=settings.GPIO_GREEN_BUTTON_LED, pin_factory=pin_factory)
-
-    def on_green_button(self):
-        logger.debug('Green button pressed')
-        self.start_stop_serving()
 
     def on_red_button(self):
         logger.debug('Red button pressed')
@@ -104,184 +265,39 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if self.busy:
             logger.info('Clean pumps command ignored because the Artist is busy')
             return
-        if start_at_pump < nb_pumps and not self.weight_module.dummy:
-            logger.info('Will now clean pump %s' % start_at_pump)
-            self.busy = True
-            def end():
-                self.pumps.stop(start_at_pump)
-                time.sleep(5)
-                self.busy = False
-                self.clean_pumps(start_at_pump=start_at_pump + 1)
-            self.pumps.start(start_at_pump)
-            self.weight_module.trigger_on_condition(end, lambda weight: weight < -10, 20, end)
-        else:
-            logger.info('Done cleaning pumps')
-
-    def start_stop_serving(self):
-        # must not bounce
-        if self.busy and self.current_order is not None:
-            if self.current_order.status == 1:
-                self.move_current_order_to_serving()
-            elif self.current_order.status == 2:
-                # could happen we green button used to interrupt
-                logger.info('Order %s was serving, interrupted' % self.current_order)
-                self.abandon_current_order()
-            else:
-                logger.error('We force the order %s to change state, but it does not make sense to do now' % self.current_order)
-        else:
-            logger.info('No order to pass to the next state')
+        logger.error('Not implemented')
 
     def emergency_stop(self):
-        self.abandon_current_order()
         logger.info('Emergency stop!')
-
-    def abandon_current_order(self):
-        self.weight_module.kill_current_task()  # prevents any callback from happening
+        self.stop_thread()
         self.pumps.stop_all()
-        self.green_button_led.off()
-        logger.info('Abandon current order %s' % self.current_order)
-        if self.current_order is not None and self.current_order.status != 4:
-            # pass this if already abandoned
-            self.current_order.status = 4  # abandon
-            self.current_order.save()  # triggers order_post_save but we won't do anything
-        self.current_order = None  # forget about current order
-        self.busy = False  # ready to take on new orders
 
-    def move_current_order_to_serving(self):
-        # no verification on status, do it outside this method
-        # this is executed in a separate thread, so sleep is not a problem
-        self.current_order.status = 2
-        self.current_order.save()
-
-    def move_current_order_to_finished(self):
-        self.green_button_led.off()
-        if self.current_order is None:
-            logger.error('No order to finish!')
-        else:
-            logger.debug('I have finished %s' % self.current_order)
-            self.current_order.status = 3
-            self.current_order.save()
-            self.current_order = None  # forget about current order
-        self.busy = False  # ready to take on new orders
-
-    def wait_for_glass(self):
-        pass_this_step_condition = lambda weight: weight > self.config.ux_glass_detection_value
-        def glass_timeout():
-            if self.config.ux_serve_even_if_no_glass_detected:
-                self.move_current_order_to_serving()
-            else:
-                logger.info('Time out while waiting for glass for %s' % self.current_order)
-                self.abandon_current_order()
-        if self.weight_module.trigger_on_condition(
-            self.move_current_order_to_serving,
-            pass_this_step_condition,
-            self.config.ux_timeout_glass_detection,
-            glass_timeout
-        ):
-            logger.debug('Will move %s to serving when glass is detected' % self.current_order)
-            return
-        else:
-            logger.error('Could not start background task in WaitForGlass state for %s' % self.current_order)
-            return self.abandon_current_order()
-
-    def get_available_dispenser(self, dose):
-        dispensers_query = dose.ingredient.dispensers(filter_out_empty=self.config.ux_empty_dispenser_makes_mix_not_available)
-        if dispensers_query.exists():
-            return dispensers_query[0]
-        else:
+    @property
+    def current_order(self):
+        if not self.busy or self.thread is None:
             return None
+        return self.thread.order
 
-    def serve_dose(self, dose):
-        dispenser = self.get_available_dispenser(dose)
-        if dispenser is None:
-            # can't serve
-            logger.error('No available dispenser providing %s. Stopping cocktail' % dose.ingredient)
-            return self.abandon_current_order()
-        current_weight = self.weight_module.make_constant_weight_measure()
-        stop_serving_when = lambda weight: ((weight - current_weight) > dose.weight)
-        logger.debug('Current weight %sg, will stop when I reach %sg more' % (current_weight, dose.weight))
-        def finished_dose():
-            logger.debug('Stopping pump %s' % dispenser.number)
-            self.pumps.stop(dispenser.number)
-            logger.debug('I finished %s for %s' % (dose, self.current_order))
-            time.sleep(self.config.ux_delay_between_two_doses)
-            new_weight = self.weight_module.make_constant_weight_measure()
-            logger.debug('I distributed %s grams when you asked for %s grams' % (new_weight - current_weight, dose.weight))
-            self.current_order.doses_served += 1
-            self.current_order.save()
-        def timeout_serving():
-            logger.debug('Stopping pump %s' % dispenser.number)
-            self.pumps.stop(dispenser.number)
-            logger.info('Pump %i is not serving within %s seconds' % (dispenser.number, str(self.config.ux_timeout_serving)))
-            if self.config.ux_mark_not_serving_dispensers_as_empty and not dispenser.is_empty:
-                logger.info('Mark %s as empty' % dispenser)
-                dispenser.is_empty = True
-                dispenser.save()
-            logger.debug('Timeout (%ss) serving for %s for %s, abandon' % (self.config.ux_timeout_serving, dose, self.current_order))
-            self.abandon_current_order()
-        logger.debug('Starting pump %s' % dispenser.number)
-        self.pumps.start(dispenser.number)
-        if self.weight_module.trigger_on_condition(finished_dose, stop_serving_when, self.config.ux_timeout_serving, timeout_serving):
-            logger.debug('Started serving %s using %s' % (dose, dispenser))
-        else:
-            logger.debug('Stopping pump %s' % dispenser.number)
-            self.pumps.stop(dispenser.number)
-            logger.error('Could not start background task to serve %s for %s' % (dose, self.current_order))
-            return self.abandon_current_order()
+    def stop_thread(self):
+        if self.thread is not None:
+            logger.debug('Stop thread %s' % self.thread)
+            self.thread.exit_event.set()
 
-    def serve(self):
-        self.green_button_led.blink(
-            on_time=self.config.button_blink_time_led_green,
-            off_time=self.config.button_blink_time_led_green)
-        doses = self.current_order.mix.ordered_doses() if self.current_order.mix else []
-        if self.current_order.doses_served == 0:
-            # first time
-            logger.debug('I will now serve %s' % self.current_order)
-            time.sleep(self.config.ux_delay_before_start_serving)
-        if self.current_order.doses_served < len(doses):
-            # we have a new dose to serve
-            dose = doses[self.current_order.doses_served]
-            if dose.ingredient.added_separately:
-                logger.debug('You can add %s separately' % dose.ingredient)
-                self.current_order.doses_served += 1
-                self.current_order.save()
-            else:
-                self.serve_dose(dose)
-        elif self.current_order.doses_served == len(doses):
-            # all the doses were served
-            self.move_current_order_to_finished()
+    def accept_new_order(self, order):
+        if self.busy:
+            logger.error('We are already busy')
+            return False
+        if order.mix is None:
+            logger.error('Your order has no associated mix')
+            return False
+        if not order.mix.is_available():
+            logger.error('This mix is not available')
+            return False
 
-    def order_post_save(self, sender, instance, created, raw, using, update_fields, **kwargs):
-        order = instance
+        logger.debug('%s is accepted' % order)
+        self.busy = True
+        self.thread = ServeOrderThread(order, self)
+        self.thread.start()  # good bye
+        # thread will set busy = False
 
-        if created:  # on creation of a new order
-            if not self.busy and order.mix and order.mix.is_available():
-                # we accept order
-                self.busy = True
-                order.accepted, self.current_order = True, order
-                order.status = 1  # next step, the order is waiting for a glass
-                self.green_button_led.on()
-                logger.debug('%s was accepted' % order)
-                return order.save()
-            else:
-                available = 'no mix' if order.mix is None else order.mix.is_available()
-                logger.error('%s refused (was I busy?: %s, is available?: %s)' % (order, self.busy, available))
-                if order.accepted:
-                    order.accepted = False
-                    return order.save()
-                return
-
-        if order.accepted and self.current_order == order and self.busy:
-            # current accepted order is processed here
-            if order.status == 1:
-                if self.config.ux_use_green_button_to_start_serving:
-                    pass  # nothing to do, button press will trigger next state
-                    if self.green_button is None or self.green_button.when_held is None:
-                        logger.error('Nothing will happen, green button does nothing')
-                    else:
-                        logger.debug('Waiting for green button to start %s' % self.green_button.when_held)
-                else:
-                    self.wait_for_glass()
-            elif order.status == 2:
-                self.serve()
-            # elif order.status: don't care
+        return True  # accepted and thread started

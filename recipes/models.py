@@ -23,6 +23,89 @@ def _cut(value, low=None, high=None):
     return value
 
 
+class Configuration(solo.models.SingletonModel):
+    updated_at = models.DateTimeField(auto_now=True)
+
+    ux_show_only_available_mixes = models.BooleanField(default=False)
+    ux_show_only_verified_mixes = models.BooleanField(default=True)
+    hardware_use_dummy = models.BooleanField(default=True, help_text="For debug, keep False otherwise")
+    ux_mark_not_serving_dispensers_as_empty = models.BooleanField(
+        default=False,
+        help_text="Mark dispenser empty if cannot reach target weight within the timeout limit")
+    ux_empty_dispenser_makes_mix_not_available = models.BooleanField(default=True)
+    ux_show_only_real_ingredients = models.BooleanField(default=False)
+    ux_use_green_button_to_start_serving = models.BooleanField(
+        default=True,
+        help_text="If False, serving is triggered by sensing if glass is present")
+    ux_serve_even_if_no_glass_detected = models.BooleanField(
+        default=False,
+        help_text="Start serving even if no glass is detected")
+
+    ux_timeout_serving = models.FloatField(
+        default=10,
+        help_text="[s] length of time before concluding to an anomaly while serving from a dispenser")
+    ux_timeout_glass_detection = models.FloatField(
+        default=10,
+        help_text="[s] length of time before abandon of glass detection")
+    ux_glass_detection_value = models.FloatField(
+        default=10,
+        help_text="[g*] value to decide a glass is present (unit depends on weight_cell_ratio)")
+    ux_delay_before_start_serving = models.FloatField(
+        default=2,
+        help_text="[s] length of time to wait before starting a mix to account for weight variation when putting down a glass")
+    ux_delay_between_two_doses = models.FloatField(
+        default=1,
+        help_text="[s] length of time to wait before starting a new dose to account for flow delay")
+
+    button_bounce_time_red = models.FloatField(
+        default=10,
+        help_text="[s] length of time that the component will ignore changes in state after an initial change")
+    button_bounce_time_green = models.FloatField(
+        default=3,
+        help_text="[s] length of time that the component will ignore changes in state after an initial change")
+    button_hold_time_red = models.FloatField(
+        default=5,
+        help_text="[s] length of time to wait after the button is pushed, until executing the when_held handler")
+    button_hold_time_green = models.FloatField(
+        default=0.1,
+        help_text="[s] length of time to wait after the button is pushed, until executing the when_held handler")
+    button_blink_time_led_green = models.FloatField(
+        default=0.5,
+        help_text="[s] half period")
+
+    weight_cell_channel = models.CharField(max_length=1, default='A', choices=(('A', 'A'), ('B', 'B')),)
+    weight_cell_gain = models.SmallIntegerField(default=128, choices=((32, 32), (64, 64), (128, 128)),
+        help_text="Gain 32 is only for channel B, others for channel A")
+    weight_cell_offset = models.FloatField(default=0, help_text="The tare value")
+    weight_cell_ratio = models.FloatField(default=1, help_text="Transforms a tared value to grams")
+    weight_module_queue_length = models.SmallIntegerField(default=10,
+        help_text="Weight is the median on X samples")
+    weight_module_delay_measure = models.FloatField(default=0.02,
+        help_text="[s] length of time between two weight measures, try to keep it between 10 and 100Hz")
+
+    clean_pumps_now = models.BooleanField(default=False, help_text="Trigger cleaning the pumps now. Tips: lift the weight module to skip to next pump")
+
+    class Meta:
+        verbose_name = "Configuration"
+
+    def __str__(self):
+        return 'Configuration'
+
+    def save(self, *args, **kwargs):
+        # import here to avoid cross ref
+        try:
+            from hardware.serving import CocktailArtist
+            artist = CocktailArtist.getInstance()
+            artist.reload_with_new_config(self)  # we provide self/config since we have not saved yet
+            if self.clean_pumps_now:
+                logger.info("Asking artist to clean pumps")
+                artist.clean_pumps()
+                self.clean_pumps_now = False
+        except OperationalError:
+            logger.error("Pass artist reload. This is normal during migrations")
+        super().save(*args, **kwargs)
+
+
 class Ingredient(models.Model):
     name = models.CharField(unique=True, max_length=50)
     alcohol_percentage = models.FloatField(
@@ -230,6 +313,45 @@ class Dose(models.Model):
         return not self.ingredient.added_separately
 
 
+class Order(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    mix = models.ForeignKey(
+        Mix,
+        on_delete=models.SET_NULL,  # keep command in history even in mix is deleted
+        null=True,
+        blank=True,
+    )
+    status = models.PositiveSmallIntegerField(choices=settings.SERVING_STATES_CHOICES, default=0)
+    doses_served = models.PositiveSmallIntegerField(default=0)
+    accepted = models.BooleanField(default=False)
+
+    def __str__(self):
+        if self.mix:
+            return 'Order of one {}'.format(self.mix)
+        else:
+            return 'Empty order'
+
+    def status_verbose(self):
+        if self.status in [0, 3, 4]:
+            return settings.SERVING_STATES_CHOICES[self.status][1]
+        elif self.status == 1:
+            config = Configuration.get_solo()
+            if config.ux_use_green_button_to_start_serving:
+                return 'Press green button to start'
+            else:
+                return 'Put a glass on the scale to start'
+        elif self.status == 2 and self.mix:
+            try:
+                doses = self.mix.ordered_doses()
+                dose = doses[self.doses_served]
+                return str(dose)
+            except IndexError:
+                return 'Mixing'
+        else:
+            return 'Unknown status'
+
+
 class Dispenser(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     number = models.PositiveSmallIntegerField(
@@ -260,111 +382,11 @@ class Dispenser(models.Model):
             dispensers = dispensers.filter(is_empty=False)
         return dispensers.values_list('ingredient', flat=True)
 
-
-class Order(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    mix = models.ForeignKey(
-        Mix,
-        on_delete=models.SET_NULL,  # keep command in history even in mix is deleted
-        null=True,
-        blank=True,
-    )
-    status = models.PositiveSmallIntegerField(choices=settings.SERVING_STATES_CHOICES, default=0)
-    doses_served = models.PositiveSmallIntegerField(default=0)
-    accepted = models.BooleanField(default=False)
-
-    def __str__(self):
-        if self.mix:
-            return 'Order of one {}'.format(self.mix)
+    @staticmethod
+    def get_available_dispenser(dose):
+        config = Configuration.get_solo()
+        dispensers_query = dose.ingredient.dispensers(filter_out_empty=config.ux_empty_dispenser_makes_mix_not_available)
+        if dispensers_query.exists():
+            return dispensers_query[0]
         else:
-            return 'Empty order'
-
-    def status_verbose(self):
-        return settings.SERVING_STATES_CHOICES[self.status][1]
-
-    def is_done(self):
-        return self.status in [3, 4]
-
-
-class Configuration(solo.models.SingletonModel):
-    updated_at = models.DateTimeField(auto_now=True)
-
-    ux_show_only_available_mixes = models.BooleanField(default=False)
-    ux_show_only_verified_mixes = models.BooleanField(default=True)
-    hardware_use_dummy = models.BooleanField(default=True, help_text="For debug, keep False otherwise")
-    ux_mark_not_serving_dispensers_as_empty = models.BooleanField(
-        default=False,
-        help_text="Mark dispenser empty if cannot reach target weight within the timeout limit")
-    ux_empty_dispenser_makes_mix_not_available = models.BooleanField(default=True)
-    ux_show_only_real_ingredients = models.BooleanField(default=False)
-    ux_use_green_button_to_start_serving = models.BooleanField(
-        default=True,
-        help_text="If False, serving is triggered by sensing if glass is present")
-    ux_serve_even_if_no_glass_detected = models.BooleanField(
-        default=False,
-        help_text="Start serving even if no glass is detected")
-
-    ux_timeout_serving = models.FloatField(
-        default=10,
-        help_text="[s] length of time before concluding to an anomaly while serving from a dispenser")
-    ux_timeout_glass_detection = models.FloatField(
-        default=10,
-        help_text="[s] length of time before abandon of glass detection")
-    ux_glass_detection_value = models.FloatField(
-        default=10,
-        help_text="[g*] value to decide a glass is present (unit depends on weight_cell_ratio)")
-    ux_delay_before_start_serving = models.FloatField(
-        default=2,
-        help_text="[s] length of time to wait before starting a mix to account for weight variation when putting down a glass")
-    ux_delay_between_two_doses = models.FloatField(
-        default=1,
-        help_text="[s] length of time to wait before starting a new dose to account for flow delay")
-
-    button_bounce_time_red = models.FloatField(
-        default=10,
-        help_text="[s] length of time that the component will ignore changes in state after an initial change")
-    button_bounce_time_green = models.FloatField(
-        default=3,
-        help_text="[s] length of time that the component will ignore changes in state after an initial change")
-    button_hold_time_red = models.FloatField(
-        default=5,
-        help_text="[s] length of time to wait after the button is pushed, until executing the when_held handler")
-    button_hold_time_green = models.FloatField(
-        default=0.1,
-        help_text="[s] length of time to wait after the button is pushed, until executing the when_held handler")
-    button_blink_time_led_green = models.FloatField(
-        default=0.5,
-        help_text="[s] half period")
-
-    weight_cell_channel = models.CharField(max_length=1, default='A', choices=(('A', 'A'), ('B', 'B')),)
-    weight_cell_gain = models.SmallIntegerField(default=128, choices=((32, 32), (64, 64), (128, 128)),
-        help_text="Gain 32 is only for channel B, others for channel A")
-    weight_cell_offset = models.FloatField(default=0, help_text="The tare value")
-    weight_cell_ratio = models.FloatField(default=1, help_text="Transforms a tared value to grams")
-    weight_module_queue_length = models.SmallIntegerField(default=10,
-        help_text="Weight is the median on X samples")
-    weight_module_delay_measure = models.FloatField(default=0.02,
-        help_text="[s] length of time between two weight measures, try to keep it between 10 and 100Hz")
-
-    clean_pumps_now = models.BooleanField(default=False, help_text="Trigger cleaning the pumps now. Tips: lift the weight module to skip to next pump")
-
-    class Meta:
-        verbose_name = "Configuration"
-
-    def __str__(self):
-        return 'Configuration'
-
-    def save(self, *args, **kwargs):
-        # import here to avoid cross ref
-        try:
-            from hardware.serving import CocktailArtist
-            artist = CocktailArtist.getInstance()
-            artist.reload_with_new_config(self)  # we provide self/config since we have not saved yet
-            if self.clean_pumps_now:
-                logger.info("Asking artist to clean pumps")
-                artist.clean_pumps()
-                self.clean_pumps_now = False
-        except OperationalError:
-            logger.error("Pass artist reload. This is normal during migrations")
-        super().save(*args, **kwargs)
+            return None

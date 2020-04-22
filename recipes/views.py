@@ -10,6 +10,7 @@ from django.http import Http404
 from bootstrap_modal_forms.generic import BSModalReadView
 
 from .models import Mix, Order, Configuration
+from hardware.serving import CocktailArtist
 
 
 logger = logging.getLogger('autobar')
@@ -93,6 +94,8 @@ class CreateOrderView(View):
     def post(self, request, mix_id, *args, **kwargs):
         mix = get_object_or_404(Mix, id=mix_id)
         order = Order(mix=mix)
+        artist = CocktailArtist.getInstance()
+        order.accepted = artist.accept_new_order(order)
         order.save()
         if order.accepted:
             mix.count += 1
@@ -101,10 +104,6 @@ class CreateOrderView(View):
             {
                 'order_id': order.pk,
                 'accepted': order.accepted,
-                'status': order.status,
-                'mix_name': order.mix.name,
-                'status_verbose': order.status_verbose(),
-                'done': order.is_done() or not order.accepted,
             }
         )
 
@@ -112,13 +111,17 @@ class CreateOrderView(View):
 class CheckOrderView(View):
     def get(self, request, order_id, *args, **kwargs):
         order = get_object_or_404(Order, id=order_id)
+        done = order.status in [3, 4] or not order.accepted
+        btn = 'btn-secondary'
+        if order.status == 3:
+            btn = 'btn-success'
+        elif order.status == 4:
+            btn = 'btn-danger'
         return JsonResponse(
             {
-                'accepted': order.accepted,
-                'status': order.status,
-                'mix_name': order.mix.name,
                 'status_verbose': order.status_verbose(),
-                'done': order.is_done() or not order.accepted,
+                'done': done,
+                'btn': btn,
             }
         )
 

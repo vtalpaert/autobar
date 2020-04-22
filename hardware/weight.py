@@ -205,50 +205,10 @@ class HX711(object):
         GPIO.cleanup((self._dout, self._pd_sck))
 
 
-class BackgroundTask(threading.Thread):
-    """TODO
-    """
-
-    def __init__(self, lock, condition, callback, delay, timeout, on_timeout):
-        super().__init__()
-        self.deamon = True
-        self.exit_event = threading.Event()
-        self.lock = lock
-        self.condition = condition  # weakref.proxy(condition)
-        self.callback = callback  # weakref.proxy(callback)
-        self.delay = delay
-        self.timeout = timeout
-        self.on_timeout = on_timeout  # weakref.proxy(on_timeout)
-
-    def run(self):
-        start = time.time()
-        while not self.condition():
-            if self.exit_event.is_set():
-                logger.debug('Exit event set while running')
-                self.lock.release()
-                return  # exit
-            if time.time() - start > self.timeout:
-                print('timeout!')
-                logger.info('Timeout !')
-                # release before on_timeout
-                self.lock.release()
-                self.on_timeout()
-                return  # exit
-            time.sleep(self.delay)
-        # release before callback, in case callback starts a new thread
-        self.lock.release()
-        if not self.exit_event.is_set():
-            logger.debug('Thread %s triggers callback' % id(self))
-            self.callback()
-        logger.debug('Thread %s died' % id(self))
-
-
 class WeightModule(object):
     dummy = False
 
     def __init__(self):
-        self.background_task_lock = threading.Lock()
-        self.thread = None
         self.cell = None
         self.offset = 0
         self.ratio = 1
@@ -261,7 +221,6 @@ class WeightModule(object):
             gain=config.weight_cell_gain,
             channel=config.weight_cell_channel
         )
-        self.delay_measure = config.weight_module_delay_measure
         self.queue = deque(maxlen=config.weight_module_queue_length)
         self.offset = config.weight_cell_offset
         self.ratio = config.weight_cell_ratio
@@ -273,7 +232,6 @@ class WeightModule(object):
         gain = int(input("Enter gain (32, 64 or 128) "))
         maxlen = 100
         self.cell = HX711(gpio_dt, gpio_sck, gain=gain, channel=channel)
-        self.delay_measure = 0.02
         self.queue = deque(maxlen=maxlen)
         self.offset = 0
         self.ratio = 1
@@ -301,30 +259,6 @@ class WeightModule(object):
         print("My ratio is", self.ratio)
         print("You wanted to read", known, "grams. My calculation outputs", self.convert_value_to_weight(value))
 
-        # test
-        print("Will now run a few tests")
-        def you_failed():
-            print("You failed to follow the above instruction")
-        def when_removed():
-            print("You removed the weight")
-            time.sleep(0.1)
-            def when_put_back_on():
-                print("You put the weight back")
-                time.sleep(0.1)
-                def too_fast():
-                    raise Exception("You should not see this")
-                def expected_timeout():
-                    print("We had the timeout, as expected")
-                    print("This was the last test")
-                print("I will now timeout in 5 seconds")
-                self.trigger_on_condition(too_fast, lambda weight: False, 5, expected_timeout)
-            print("You have 15 seconds to put the weight back on")
-            self.trigger_on_condition(when_put_back_on, lambda weight: weight > 0.9 * known, 15, you_failed)
-        print("You have 15 seconds to remove the weight")
-        self.trigger_on_condition(when_removed, lambda weight: weight < 0.9 * known, 15, you_failed)
-        print("Tests are running in background")
-        input("Enter to exit (but don't exit if tests are running)\n")
-
     def get_value(self):
         if self.cell is None:
             return None
@@ -350,43 +284,22 @@ class WeightModule(object):
                 logger.debug('Abnormal weight %s grams' % weight)
                 return None
 
-    def make_constant_weight_measure(self):
-        self.queue.clear()
-        for _ in range(max(10, self.queue.maxlen)):
-            value = self.get_value()
-        weight = self.convert_value_to_weight(value)
+    def make_constant_weight_measure(self, clear=True, max_try=0):
+        if clear:
+            self.queue.clear()
+            self.cell.power_up()
+            for _ in range(max(2, self.queue.maxlen - 1)):
+                value = self.get_value()
+        weight = None
+        attempt = 0
         while weight is None:
+            if max_try:
+                attempt += 1
+                if attempt > max_try:
+                    return None
             weight = self.convert_value_to_weight(self.get_value())
         return weight
 
-    def trigger_on_condition(self, callback, weight_condition, timeout, on_timeout):
-        """Will frequently test condition and trigger callback when True
-
-        weight_condition should look like: lambda weight: weight > 10
-        """
-        def apply_condition():
-            value = self.get_value()
-            weight = self.convert_value_to_weight(value)
-            if weight is None:
-                return False  # do not trigger
-            else:
-                return weight_condition(weight)
-        self.thread = BackgroundTask(self.background_task_lock, apply_condition, callback, self.delay_measure, timeout, on_timeout)
-        acquired = self.background_task_lock.acquire()
-        if acquired:
-            self.queue.clear()
-            if self.cell.power_up():
-                self.thread.start()  # will release lock
-                return True
-            return False
-        else:
-            return False
-
-    def kill_current_task(self):
-        if self.thread is not None:
-            self.thread.exit_event.set()
-
     def close(self):
-        self.kill_current_task()
         if self.cell is not None:
             self.cell.cleanup()

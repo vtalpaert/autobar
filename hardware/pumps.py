@@ -27,7 +27,9 @@ class Pumps:
                 logger.debug('You stopped all pumps, even if none was running')
         else:
             logger.debug('All pumps off')
-        return [pump.off() for pump in self.pumps]
+        for pump in self.pumps:
+            pump.off()
+        return True
 
     def stop(self, pump_id):
         self.pumps[pump_id].off()
@@ -36,10 +38,13 @@ class Pumps:
                 logger.debug('You stopped the running pump %i' % pump_id)
                 self._started_pump = None
                 self._one_pump_at_a_time.release()
+                return True
             else:
                 logger.error('Pump %i is off, but I think %s is still running. You will not be able to start another one' % (pump_id, self._started_pump))
+                return False
         else:
             logger.debug('Pump %i off' % pump_id)
+            return True
 
     def start(self, pump_id):
         if self.safety_lock:
@@ -48,11 +53,14 @@ class Pumps:
                 self._started_pump = pump_id
                 self.pumps[pump_id].on()
                 logger.debug('Pump %i is now the only one started (%s)' % (pump_id, self.pumps[pump_id].is_active))
+                return True
             else:
                 logger.error('Will not start pump %i because pump %s is already running' % (pump_id, self._started_pump))
+                return False
         else:
             self.pumps[pump_id].on()
             logger.debug('Pump %i on (%s)' % (pump_id, self.pumps[pump_id].on()))
+            return True
 
     def close(self):
         logger.debug('Close pumps GPIO interface')
