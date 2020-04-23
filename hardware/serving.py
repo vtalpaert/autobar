@@ -178,7 +178,7 @@ class ServeOrderThread(threading.Thread):
         self.order.status = 2
         self.order.save()
         for dose in doses:
-            if not self.serve_dose(dose, self.order):
+            if not self.serve_dose(dose):
                 self.green_button_led.off()
                 return False
         self.green_button_led.off()
