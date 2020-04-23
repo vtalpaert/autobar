@@ -163,7 +163,7 @@ class ServeOrderThread(threading.Thread):
 
             if self.green_button.is_active:
                 # button interruption
-                logger.debug('Button interrupt while serving %s for %s using pump %i' % (dose, self.order))
+                logger.debug('Button interrupt while serving %s for %s' % (dose, self.order))
                 logger.debug('Stopping pump %s' % dispenser.number)
                 self.artist.pumps.stop(dispenser.number)
                 return False
@@ -200,6 +200,7 @@ class ServeOrderThread(threading.Thread):
             else:
                 self.abandon_order()
         finally:
+            self.artist.pumps.stop_all()
             self.close_gpio()
             self.artist.busy = False  # tell artist we are done
 
