@@ -11,7 +11,7 @@ from gpiozero.pins.mock import MockFactory
 from hardware.singletonmixin import Singleton
 try:
     from hardware.weight import WeightModule
-except RuntimeError:
+except (RuntimeError, ModuleNotFoundError):
     class WeightModule:
         dummy = True
         def init_from_settings_and_config(self, settings, config):
@@ -169,7 +169,7 @@ class ServeOrderThread(threading.Thread):
                 return False
 
     def serve_order(self):
-        logger.debug('I am starting %s' % order)
+        logger.debug('I am starting %s' % self.order)
         self.green_button_led.blink(
             on_time=self.config.button_blink_time_led_green,
             off_time=self.config.button_blink_time_led_green)
