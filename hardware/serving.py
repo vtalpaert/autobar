@@ -178,7 +178,7 @@ class ServeOrderThread(threading.Thread):
         self.order.status = 2
         self.order.save()
         for dose in doses:
-            if not self.serve_dose(dose, order):
+            if not self.serve_dose(dose, self.order):
                 self.green_button_led.off()
                 return False
         self.green_button_led.off()
@@ -194,7 +194,7 @@ class ServeOrderThread(threading.Thread):
             self.init_gpio()
             if self.wait_to_start():
                 if self.serve_order():
-                    self.finish_order(order)
+                    self.finish_order()
                 else:
                     self.abandon_order()
             else:
