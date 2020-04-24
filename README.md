@@ -101,7 +101,7 @@ crontab -e  # to add a cronjob
 # Then add
 
 @reboot sleep 1 && /home/pi/autobar/start_server.sh &  # I found that you do not need to wait to start the server. To stop it, use pkill python in a terminal
-@reboot sleep 10 && /home/pi/autobar/start_browser.sh &  # I found that you do not need to wait to start the server. To stop it, use pkill python in a terminal
+@reboot sleep 10 && /home/pi/autobar/start_browser.sh &  # Stop the browser using killall chromium-browser
 ```
 
 ```bash
