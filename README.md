@@ -93,17 +93,16 @@ Yes that's Django in debug mode. Not safe to use anywhere else than on your loca
 
 ### Startup run
 
-We need to start the server on startup.
+As a cronjob on reboot.
 
 ```bash
 crontab -e  # to add a cronjob
 
 # Then add
 
-@reboot sleep 1 && /home/pi/autobar/start.sh &  # I found that you do not need to wait to start the server. To stop it, use pkill python in a terminal
+@reboot sleep 1 && /home/pi/autobar/start_server.sh &  # I found that you do not need to wait to start the server. To stop it, use pkill python in a terminal
+@reboot sleep 10 && /home/pi/autobar/start_browser.sh &  # I found that you do not need to wait to start the server. To stop it, use pkill python in a terminal
 ```
-
-To open the website on startup in kiosk mode, I followed [this SO answer](https://raspberrypi.stackexchange.com/a/40745). The touchscreen worked better with Chromium, Firefox did not scroll through the page.
 
 ```bash
 mkdir -p /home/pi/.config/lxsession/LXDE-pi/
@@ -118,16 +117,15 @@ nano /home/pi/.config/lxsession/LXDE-pi/autostart
 @xset -dpms
 @xset s noblank
 # disable mouse with unclutter (TODO: copy from current file)
-#@chromium-browser --window-size=1024,600 --incognito --kiosk http://localhost:8000/  # full screen mode
 ```
 
-You can use `--kiosk` to hide most messages or `--start-fullscreen` which is less restrictive on its messages to the user.
+The browser starts in `--kiosk` to hide most messages or `--start-fullscreen` which is less restrictive on its messages to the user.
 
 To exit the kiosk mode, I linked my red button (see `hardware.serving.CocktailArtist.on_red_button`) to kill chromium. I tried to simulate the F11 button with `xdotool` but `killall chromium-browser` just works.
 
 ### Wiki
 
-The code separates the concepts of hardware interfacing and user interface. Since Django works in apps, we have on one hand the `recipes` app for the basic Django website, on the other hand the `hardware` app.
+The code separates the concepts of hardware interfacing and user interface. Since Django works in apps, we have on one hand the `recipes` app for the basic Django website, on the other hand a `hardware` app/folder.
 
 Only the `recipes` app has models :
 
@@ -138,20 +136,11 @@ There are two parts, the Configuration is a SingletonModel from our dependency `
 Now for the nice parts, the cocktails. The behaviour we aimed for was to tell the autobar what ingredients we pump from, and for the machine to tell us what it can do from it. So I called `Dispenser`s the pumps in case someone uses another kind of hardware. It links to one of our known `Ingredient`s. `Mix` is the most important table, it stores all the cocktail information. `Dose` represents the composition of a mix, with a precise quantity of an ingredient in a specific order.
 Finally, the *Mix me!* button posts an `Order` creation. This way, I had the history of user interactions. The mix's `count` field is thus redundant, but now you can edit it at least.
 
-I tried using the Django forms to properly work with the Orders, but in the end I landed on Ajax for background calls. For example, to display the last Order progress, we spam GET requests to the server for an update. Not the best code, but works perfectly at our scale. The `hardware` app is connected to this database by capturing every `post_save` Order event. The singleton object `CocktailArtist` receives the order object everytime its save method is called. Seems like I really like singletons, but this was necessary to ensure GPIO pins are instanciated only once. The Singleton class is not mine. The life of an Order goes as follows :
-
-1. Order creation from a POST request
-1. the Artist catches the creation, and `accepted=True`s if it was not already busy and all ingredients are available. The Artist is now busy and saves the order, so it goes to post_save again
-1. Artist sees your order a second time, since it is accepted, it moves it to the *waiting* status. According to your parameters, it could mean waiting to detect the weight of a glass or the user pressing a start button. The Artist saves the order
-1. There it is again ! The post_save catches the order again. The Artist is still busy, but it does nothing with the Order
-1. At some point, another thread moves the Order to the next status : *serving*. It could be a button press, or a weight module trigger
-1. The Order at *serving* is caught by the Artist. According to the `doses_served`, we choose the next `Dose` to execute. If done, passes to *done*
-
-There is a lot of overkill in this project : the ingredient density, doing the median of weight values, ... (to complete has I code more unecessary things)
+I tried using the Django forms to properly work with the Orders, but in the end I landed on Ajax for background calls. For example, to display the last Order progress, we spam GET requests on the database to follow the updates. Not the best code, but works perfectly at our scale. The `hardware` part is called by your Order creation POST view. If the singleton object `CocktailArtist` accepts your order, he starts a background thread `ServeOrderThread` to serve the mix (seems like I really like singletons, but this was necessary to ensure GPIO pins are instanciated only once, the Singleton class is not mine).
 
 ## Other automatic cocktail machines
 
-(PR to be included)
+(PR me to be included in this list)
 
 - (todo)
 
@@ -159,9 +148,7 @@ There is a lot of overkill in this project : the ingredient density, doing the m
 
 - combine doses of same ingredient (look out for number field)
 - no 0.0 quantity for regular ingredients
-- eliminate pictures not in DB
 - add fixtures with verified mixes
 - manually add all mixes with most common alcohol
 - set volume to shot (big, small...)
-- script to manually verify mix while being prompted with online info
 - [use F in queries](https://docs.djangoproject.com/en/2.2/topics/db/queries/#filters-can-reference-fields-on-the-model)
