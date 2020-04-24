@@ -11,7 +11,7 @@ from gpiozero.pins.mock import MockFactory
 from hardware.singletonmixin import Singleton
 try:
     from hardware.weight import WeightModule
-except RuntimeError:
+except (RuntimeError, ModuleNotFoundError):
     class WeightModule:
         dummy = True
         def init_from_settings_and_config(self, settings, config):
@@ -163,13 +163,13 @@ class ServeOrderThread(threading.Thread):
 
             if self.green_button.is_active:
                 # button interruption
-                logger.debug('Button interrupt while serving %s for %s using pump %i' % (dose, self.order))
+                logger.debug('Button interrupt while serving %s for %s' % (dose, self.order))
                 logger.debug('Stopping pump %s' % dispenser.number)
                 self.artist.pumps.stop(dispenser.number)
                 return False
 
     def serve_order(self):
-        logger.debug('I am starting %s' % order)
+        logger.debug('I am starting %s' % self.order)
         self.green_button_led.blink(
             on_time=self.config.button_blink_time_led_green,
             off_time=self.config.button_blink_time_led_green)
@@ -178,7 +178,7 @@ class ServeOrderThread(threading.Thread):
         self.order.status = 2
         self.order.save()
         for dose in doses:
-            if not self.serve_dose(dose, order):
+            if not self.serve_dose(dose):
                 self.green_button_led.off()
                 return False
         self.green_button_led.off()
@@ -194,12 +194,13 @@ class ServeOrderThread(threading.Thread):
             self.init_gpio()
             if self.wait_to_start():
                 if self.serve_order():
-                    self.finish_order(order)
+                    self.finish_order()
                 else:
                     self.abandon_order()
             else:
                 self.abandon_order()
         finally:
+            self.artist.pumps.stop_all()
             self.close_gpio()
             self.artist.busy = False  # tell artist we are done
 
