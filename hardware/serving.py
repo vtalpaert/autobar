@@ -220,14 +220,17 @@ class CleanPumpsThread(ThreadWithGPIO):
                 # exit called
                 logger.debug('Exit thread while cleaning pump %s' % pump_id)
                 self.artist.pumps.stop(pump_id)
+                return
             if time.time() - start > 60:
                 # timeout
                 logger.debug('Done cleaning pump %s' % pump_id)
                 self.artist.pumps.stop(pump_id)
+                return
             if self.green_button.is_active:
                 # button interruption
                 logger.debug('Button interrupt while cleaning pump %s' % pump_id)
                 self.artist.pumps.stop(pump_id)
+                return
 
     def run(self):
         try:
