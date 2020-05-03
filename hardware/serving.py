@@ -27,12 +27,11 @@ from recipes.models import Configuration, Dispenser
 logger = logging.getLogger('autobar')
 
 
-class ServeOrderThread(threading.Thread):
-    def __init__(self, order, artist):
+class ThreadWithGPIO(threading.Thread):
+    def __init__(self, artist):
         super().__init__()
         self.deamon = True
         self.exit_event = threading.Event()
-        self.order = order
         self.config = artist.config
         self.artist = artist
         self.green_button = None
@@ -52,6 +51,12 @@ class ServeOrderThread(threading.Thread):
             self.green_button.close()
         if self.green_button_led is not None:
             self.green_button_led.close()
+
+
+class ServeOrderThread(ThreadWithGPIO):
+    def __init__(self, order, artist):
+        super().__init__(artist)
+        self.order = order
 
     def abandon_order(self):
         logger.info('Abandon %s' % self.order)
@@ -205,6 +210,41 @@ class ServeOrderThread(threading.Thread):
             self.artist.busy = False  # tell artist we are done
 
 
+class CleanPumpsThread(ThreadWithGPIO):
+    def clean_pump(self, pump_id):
+        logger.debug('Start clean pump %s' % pump_id)
+        start = time.time()
+        self.artist.pumps.start(pump_id)
+        while True:  # main loop
+            if self.exit_event.is_set():
+                # exit called
+                logger.debug('Exit thread while cleaning pump %s' % pump_id)
+                self.artist.pumps.stop(pump_id)
+            if time.time() - start > 60:
+                # timeout
+                logger.debug('Done cleaning pump %s' % pump_id)
+                self.artist.pumps.stop(pump_id)
+            if self.green_button.is_active:
+                # button interruption
+                logger.debug('Button interrupt while cleaning pump %s' % pump_id)
+                self.artist.pumps.stop(pump_id)
+
+    def run(self):
+        try:
+            self.init_gpio()
+            logger.info('Cleaning pumps has started')
+            self.green_button_led.blink(
+                on_time=self.config.button_blink_time_led_green,
+                off_time=self.config.button_blink_time_led_green)
+            for pump_id in range(len(self.artist.pumps.pumps)):
+                time.sleep(5)
+                self.clean_pump(pump_id)
+        finally:
+            self.artist.pumps.stop_all()
+            self.close_gpio()
+            self.artist.busy = False  # tell artist we are done
+
+
 class CocktailArtist(Singleton):  # inherits Singleton, there can only be one artist at a time
     def __init__(self):
         print('Artist id', id(self))  # unique
@@ -266,7 +306,9 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
         if self.busy:
             logger.info('Clean pumps command ignored because the Artist is busy')
             return
-        logger.error('Not implemented')
+        self.busy = True
+        self.thread = CleanPumpsThread(self)
+        self.thread.start()  # good bye
 
     def emergency_stop(self):
         logger.info('Emergency stop!')
@@ -275,7 +317,7 @@ class CocktailArtist(Singleton):  # inherits Singleton, there can only be one ar
 
     @property
     def current_order(self):
-        if not self.busy or self.thread is None:
+        if not self.busy or self.thread is None or isinstance(self.thread, CleanPumpsThread):
             return None
         return self.thread.order
 
