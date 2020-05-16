@@ -119,6 +119,9 @@ class Ingredient(models.Model):
         default=False,
     )
 
+    class Meta:
+        ordering = ['name']
+
     def save(self, *args, **kwargs):
         self.alcohol_percentage = _cut(self.alcohol_percentage, low=0, high=100)
         self.density = _cut(self.density, low=0)
