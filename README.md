@@ -4,8 +4,6 @@ A mechanical cocktail artist built with pumps and a Raspberry Pi inside an old c
 
 ![latest pic for now](media/docs/autobar_painted.jpg)
 
-Above is a picture of the time when we tested with only two pumps, using a timer to control the dosage.
-
 ## Hardware - tips for autobar constructions
 
 ### Pumps
