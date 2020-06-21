@@ -1,16 +1,17 @@
 import os
 from math import ceil
 
-from django.utils.log import logging
+import solo.models
+from django.conf import settings
 from django.db import models
 from django.db.utils import OperationalError
-import solo.models
+from django.utils.log import logging
 from django.utils.text import get_valid_filename
 
-from django.conf import settings
+from recipes.animation import get_animation_for_mix
+
 DISPENSER_CHOICES = [(i, i) for i in range(len(settings.GPIO_PUMPS))]
 
-from recipes.animation import get_animation_for_mix
 
 logger = logging.getLogger('autobar')
 
@@ -162,6 +163,9 @@ class Ingredient(models.Model):
             config = Configuration.get_solo()
             ingredients_in_dispensers = Dispenser.ingredients_in_dispensers(filter_out_empty=config.ux_empty_dispenser_makes_mix_not_available)
         return Ingredient.alcohols().filter(id__in=ingredients_in_dispensers)
+
+    class Meta:
+        ordering = ('name', )
 
 
 def mix_upload_to(instance, filename):
