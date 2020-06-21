@@ -6,104 +6,137 @@
 
 {% block css %}
 <style type="text/css">
-    .bs-example{
-        margin: 20px;
-    }
-    .modal-content iframe{
-        margin: 0 auto;
-        display: block;
-    }
+  .bs-example {
+    margin: 20px;
+  }
+
+  .modal-content iframe {
+    margin: 0 auto;
+    display: block;
+  }
 </style>
 {% endblock %}
 
 {% block dashboard_active %}active{% endblock %}
 
 {% block content %}
-<div class="modal fade" data-backdrop="static" tabindex="-1" role="dialog" id="modal">
-  <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade"
+     data-backdrop="static"
+     tabindex="-1"
+     role="dialog"
+     id="modal">
+  <div class="modal-dialog modal-lg"
+       role="document">
     <div class="modal-content"></div>
   </div>
 </div>
 
-<nav class="navbar navbar-expand-sm navbar-sticky-top navbar-light border-bottom border-dark" style="background-color: #BED0F4;">
+<nav class="navbar navbar-expand-sm navbar-sticky-top navbar-light border-bottom border-dark"
+     style="background-color: #BED0F4; bottom: 55px; position: fixed; z-index: 1000; left: 0; right: 0; ">
   <span class="navbar-text">
-      Sort by :
+    Sort by :
   </span>
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sorts" aria-controls="sorts" aria-expanded="false" aria-label="Sorts">
+  <button class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#sorts"
+          aria-controls="sorts"
+          aria-expanded="false"
+          aria-label="Sorts">
     <span class="navbar-toggler-icon"></span>
   </button>
-  <div class="collapse navbar-collapse" id="sorts">
+  <div class="collapse navbar-collapse"
+       id="sorts">
     <ul class="navbar-nav mr-auto">
-    {% for sort_type in sorts %}
-       {% comment %}{% with sort_dict=objects|get_item:sort_type %}{% endcomment %}
-          <li class="nav-item">
-            <a class="nav-link {% if sort_type == sort_by %}text-dark{% else %}text-muted{% endif %}" href="{% url 'mixes_s' sort_type %}">{{ sort_type }}</a>
-          </li>
-       {% comment %}{% endwith %}{% endcomment %}
-    {% empty %}
-          <li>No sorts.</li>
-    {% endfor %}
-    </ul>
-  </div>
-</nav>
-
-<nav class="navbar navbar-expand-sm navbar-sticky-top navbar-light border-bottom border-dark" style="background-color: #e3f2fd;">
-  <span class="navbar-text">
-      Sort {{ sort_by }} by :
-  </span>
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#subsorts" aria-controls="subsorts" aria-expanded="false" aria-label="Subsorts">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-  <div class="collapse navbar-collapse" id="subsorts">
-    <ul class="navbar-nav mr-auto">
-    {% for subsort_type in subsorts %}
-          <li class="nav-item">
-            <a class="nav-link {% if subsort_type == subsort_by %}text-dark{% else %}text-muted{% endif %}" href="{% url 'mixes_ss' sort_by subsort_type %}">{{ subsort_type }}</a>
-          </li>
-    {% empty %}
-          <li>No subsorts.</li>
-    {% endfor %}
-    </ul>
-  </div>
-</nav>
-
-
-<main role="main">
-  <section class="jumbotron text-center">
-    <div class="container">
-      <h1 class="jumbotron-heading">Fancy a drink ?</h1>
-      <p class="lead text-muted">Choose how to filter above between Popularity, Recently added... Click View to see the cocktail details and order one from the robot.</p>
-    </div>
-  </section>
-  <div class="album py-5 bg-light">
-    <div class="container">
-      {% for mix in mixes %}
-      <div class="row">
-        {% comment %}<div class="col-md-4">{% endcomment %}
-          <div class="card mb-4 shadow-sm">
-            {% if mix.image %}
-            <img class="card-img-top" src="{{ MEDIA_URL }}{{ mix.image }}" alt="">
-            {% endif %}
-            <div class="card-body">
-              {% ingredient_tags mix %}
-              <h1 class="card-title">{{ mix }}</h1>
-              {% comment %}<p class="card-text">{{ mix.description }}</p>{% endcomment %}
-              <div class="d-flex justify-content-between align-items-center">
-                <!-- Modal HTML -->
-                <button type="button" class="modal-mix btn btn-md btn-secondary" data-id="{% url 'modal_mix' mix.pk %}">Show more</button>
-                {% comment %}
-                <button type="button" class="modal-order btn btn-sm btn-outline-secondary" data-id="{% url 'order_form' mix.pk %}">Order</button>
-                {% endcomment %}
-                <small class="text-muted">{{ mix.likes }} likes, served {{ mix.count }} times.</small>
-              </div>
-            </div>
-          </div>
-          {% comment %}</div>{% endcomment %}
-      </div>
+      {% for sort_type in sorts %}
+      {% comment %}{% with sort_dict=objects|get_item:sort_type %}{% endcomment %}
+      <li class="nav-item">
+        <a class="nav-link {% if sort_type == sort_by %}text-dark{% else %}text-muted{% endif %}"
+           href="{% url 'mixes_s' sort_type %}">{{ sort_type }}</a>
+      </li>
+      {% comment %}{% endwith %}{% endcomment %}
       {% empty %}
-          No mixes.
+      <li>No sorts.</li>
       {% endfor %}
-    </div>
+    </ul>
+  </div>
+</nav>
+
+<nav class="navbar navbar-expand-sm navbar-sticky-top navbar-light border-bottom border-dark"
+     style="background-color: #e3f2fd; bottom: 110px; position: fixed; z-index: 1000; left: 0; right: 0; ">
+  <span class="navbar-text">
+    Sort {{ sort_by }} by :
+  </span>
+  <button class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#subsorts"
+          aria-controls="subsorts"
+          aria-expanded="false"
+          aria-label="Subsorts">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse"
+       id="subsorts">
+    <ul class="navbar-nav mr-auto">
+      {% for subsort_type in subsorts %}
+      <li class="nav-item">
+        <a class="nav-link {% if subsort_type == subsort_by %}text-dark{% else %}text-muted{% endif %}"
+           href="{% url 'mixes_ss' sort_by subsort_type %}">{{ subsort_type }}</a>
+      </li>
+      {% empty %}
+      <li>No subsorts.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</nav>
+
+
+<main role="main"
+      style="padding-top:74px;">
+  <div class="helper alert alert-warning"
+       style="font-size: 2rem;position:
+       fixed;top:0;left:0;right:0;z-index:1000;text-align:center;border-radius:0;">
+    Choose a drink
+  </div>
+  <div class="album bg-light"
+       style="padding:0">
+    {% for mix in mixes %}
+    {% comment %}<div class="col-md-4">{% endcomment %}
+      <div class="card shadow-sm modal-mix"
+           style="width: 100%;max-height:450px;border:none;border-radius:none;"
+           data-id="{% url 'modal_mix' mix.pk %}">
+        {% if mix.image %}
+        <img src="{{ MEDIA_URL }}{{ mix.image }}"
+             alt=""
+             style="max-height:450px;position: relative;object-fit:cover;">
+        {% else %}
+        <div style="height: 300px;width: 100%;position: relative;">&nbsp;</div>
+        {% endif %}
+        <div class="card-body"
+             style="background-color: #000000AA;position: absolute;bottom:0;left:0;right:0;">
+          <h1 class="card-title"
+              style="color:white;">{{ mix }}</h1>
+          {% ingredient_tags mix %}
+          {% comment %}<p class="card-text">{{ mix.description }}</p>{% endcomment %}
+          <div class="d-flex justify-content-between align-items-center">
+            <small style="color: white;">{{ mix.likes }} likes, served {{ mix.count }} times.</small>
+            <!-- Modal HTML -->
+            <button type="button"
+                    class="modal-mix btn btn-md btn-success"
+                    data-id="{% url 'modal_mix' mix.pk %}">Show more</button>
+            {% comment %}
+            <button type="button"
+                    class="modal-order btn btn-sm btn-outline-secondary"
+                    data-id="{% url 'order_form' mix.pk %}">Order</button>
+            {% endcomment %}
+          </div>
+        </div>
+      </div>
+      {% comment %}</div>{% endcomment %}
+    {% empty %}
+    No mixes.
+    {% endfor %}
   </div>
 
 </main>
@@ -111,16 +144,18 @@
 {% endblock %}
 
 {% block extrascripts %}
-  <script src="{% static 'js/likes.js' %}"></script>
-  <script src="{% static 'js/mixme_and_stop_button.js' %}"></script>
-  <script type="text/javascript">
-    $(function () {
-      $(".modal-mix").each(function () {
-        $(this).modalForm({formURL: $(this).data('id')});
+<script src="{% static 'js/likes.js' %}"></script>
+<script src="{% static 'js/mixme_and_stop_button.js' %}"></script>
+<script type="text/javascript">
+  $(function() {
+    $(".modal-mix").each(function() {
+      $(this).modalForm({
+        formURL: $(this).data('id')
       });
-      //$(".modal-order").each(function () {
-      //  $(this).modalForm({formURL: $(this).data('id')});
-      //});
     });
-  </script>
+    //$(".modal-order").each(function () {
+    //  $(this).modalForm({formURL: $(this).data('id')});
+    //});
+  });
+</script>
 {% endblock extrascripts %}
