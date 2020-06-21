@@ -2,6 +2,8 @@
   {% for ingredient in ingredients %}
   <a class="badge badge-pill {% if ingredient.alcohol_percentage %}badge-danger{% else %}badge-primary{% endif %}"
      href="{% if ingredient.alcohol_percentage %}/mixes/Alcohol/{{ ingredient.name }}{% else %}#{% endif %}"
-     role="button">{{ ingredient }}</a>
+     role="button"
+     {% if ingredient.alcohol_percentage %}onclick="event.stopPropagation()"
+     {% endif %}>{{ ingredient }}</a>
   {% endfor %}
 </div>
