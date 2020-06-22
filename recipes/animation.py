@@ -1,4 +1,5 @@
 import os
+import sys
 from itertools import cycle
 
 from django.conf import settings
@@ -8,11 +9,12 @@ ANIMATION_DIR = os.path.join(settings.MEDIA_ROOT, 'animation')
 def valid_video(f):
     return os.path.isfile(os.path.join(ANIMATION_DIR, f)) and f.endswith('.mp4')
 
-ANIMATIONS = cycle([f for f in
-    os.listdir(ANIMATION_DIR) if valid_video(f)])
+FILES = [f for f in
+    os.listdir(ANIMATION_DIR) if valid_video(f)]
+ANIMATIONS = cycle(FILES)
 
-if not len(ANIMATIONS):
-    print(
+if not len(FILES):
+    sys.exit(
     """Please! It's really important that you add animations files (.mp4) """
     """inside the {} directory""".format(ANIMATION_DIR)
     )
